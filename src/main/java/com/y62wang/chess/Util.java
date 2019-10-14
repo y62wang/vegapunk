@@ -1,5 +1,7 @@
 package com.y62wang.chess;
 
+import com.y62wang.chess.bits.Endianess;
+
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.Bitboard.BOARD_WIDTH;

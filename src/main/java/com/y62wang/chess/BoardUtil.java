@@ -51,6 +51,16 @@ public class BoardUtil
         return position;
     }
 
+    public static boolean isValidSquare(int square)
+    {
+        return square >= 0 && square < 64;
+    }
+
+    public static boolean isWithinDimension(int fileOrRank)
+    {
+        return fileOrRank >= 0 && fileOrRank <= 7;
+    }
+
     public static List<Integer> squaresOfBB(long bb)
     {
         List<Integer> list = new ArrayList<>();

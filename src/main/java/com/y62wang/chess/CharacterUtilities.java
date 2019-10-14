@@ -1,5 +1,7 @@
 package com.y62wang.chess;
 
+import com.y62wang.chess.bits.Endianess;
+
 public class CharacterUtilities
 {
     public static char[] toLittleEndianBoard(char[] charBoard)

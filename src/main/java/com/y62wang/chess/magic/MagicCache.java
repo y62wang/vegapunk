@@ -3,11 +3,13 @@ package com.y62wang.chess.magic;
 import com.y62wang.chess.Bishop;
 import com.y62wang.chess.BoardUtil;
 import com.y62wang.chess.Rook;
+import com.y62wang.chess.Util;
 
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static com.y62wang.chess.BoardConstants.BB_RANK_2;
 import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 import static com.y62wang.chess.magic.MagicConstants.BISHOP_MAGIC;
 import static com.y62wang.chess.magic.MagicConstants.BISHOP_MAGIC_BITS;
@@ -96,5 +98,8 @@ public class MagicCache
     public static void main(String[] args)
     {
         MagicCache magicCache = new MagicCache();
+        long pos = BoardUtil.position(4) | BB_RANK_2;
+        long result = magicCache.rookAttacks(0, pos);
+        Util.printBitboard(result);
     }
 }
