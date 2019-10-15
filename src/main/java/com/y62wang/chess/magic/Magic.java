@@ -35,9 +35,10 @@ public class Magic
         return attacks;
     }
 
-    public long getAttacks(long blockers)
+    public long getAttacks(long occupied)
     {
-        int key = ( int ) ((blockers * getMagic()) >>> getBitShifts());
+        long innerOccupied = occupied & getInnerMask();
+        int key = ( int ) ((innerOccupied * getMagic()) >>> getBitShifts());
         return attacks[key];
     }
 }

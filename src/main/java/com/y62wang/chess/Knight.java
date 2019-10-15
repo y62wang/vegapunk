@@ -1,16 +1,13 @@
 package com.y62wang.chess;
 
-import java.util.stream.IntStream;
+import com.y62wang.chess.bits.BitScan;
 
-import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 import static com.y62wang.chess.BoardUtil.isWithinDimension;
 
 public class Knight
 {
     private static final long[] ATTACKS = new long[BOARD_SIZE];
-
-    private static final int[] directions = new int[] {7, 8, 9, -1, 1, -7, -8, -9};
 
     static
     {
@@ -33,9 +30,8 @@ public class Knight
         }
     }
 
-    public static long knightAttacks(int square)
+    public static long knightTargets(int square)
     {
         return ATTACKS[square];
     }
-
 }

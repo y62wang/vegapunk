@@ -1,10 +1,5 @@
 package com.y62wang.chess;
 
-import java.util.stream.IntStream;
-
-import static com.y62wang.chess.BoardConstants.BB_FILE_D;
-import static com.y62wang.chess.BoardConstants.BOARD_DIM;
-import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 import static com.y62wang.chess.BoardConstants.FILE_A;
 import static com.y62wang.chess.BoardConstants.FILE_H;
 import static com.y62wang.chess.BoardConstants.RANK_1;

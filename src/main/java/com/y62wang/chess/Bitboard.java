@@ -1,9 +1,16 @@
 package com.y62wang.chess;
 
+import com.y62wang.chess.bits.BitScan;
 import com.y62wang.chess.bits.Endianess;
+import com.y62wang.chess.magic.MagicCache;
 
 import java.util.stream.IntStream;
 
+import static com.y62wang.chess.BoardConstants.BB_FILE_A;
+import static com.y62wang.chess.BoardConstants.BB_FILE_H;
+import static com.y62wang.chess.BoardConstants.BB_RANK_4;
+import static com.y62wang.chess.BoardConstants.BB_RANK_5;
+import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
 
 public class Bitboard
@@ -26,7 +33,7 @@ public class Bitboard
 
     public Bitboard(final char[] chars, final byte turn)
     {
-        this(CharacterUtilities.toLittleEndianBoard(NEW_BOARD_CHARS));
+        this(CharacterUtilities.toLittleEndianBoard(chars));
         this.turn = turn;
     }
 
@@ -227,13 +234,154 @@ public class Bitboard
         return turn == WHITE;
     }
 
-    public long getOccupiedSquares()
+    private long occupied()
     {
         return WP | WN | WB | WR | WK | WQ | BP | BN | BB | BR | BK | BQ;
     }
 
-    public long getEmptySquares()
+    private long unoccupied()
     {
-        return ~getOccupiedSquares();
+        return ~occupied();
+    }
+
+    private long knightTargets(long knights)
+    {
+        long targets = 0;
+        while (knights != 0)
+        {
+            int ls1b = BitScan.ls1b(knights);
+            knights &= ~shift(1L, ls1b);
+            targets |= Knight.knightTargets(ls1b);
+        }
+
+        return targets;
+    }
+
+    private long kingTargets(long kings)
+    {
+        long targets = 0;
+        while (kings != 0)
+        {
+            int ls1b = BitScan.ls1b(kings);
+            kings &= ~shift(1L, ls1b);
+            targets |= King.kingTargets(ls1b);
+        }
+        return targets;
+    }
+
+    private long rookTargets(long rooks, long occupied)
+    {
+        long attacks = 0;
+        while (rooks != 0)
+        {
+            int ls1b = BitScan.ls1b(rooks);
+            rooks &= ~shift(1L, ls1b);
+            attacks |= MagicCache.getInstance().rookAttacks(ls1b, occupied);
+        }
+        return attacks;
+    }
+
+    private long bishopTargets(long bishops, long occupied)
+    {
+        long attacks = 0;
+        while (bishops != 0)
+        {
+            int ls1b = BitScan.ls1b(bishops);
+            bishops &= ~shift(1L, ls1b);
+            attacks |= MagicCache.getInstance().bishopAttacks(ls1b, occupied);
+        }
+        return attacks;
+    }
+
+    private long queenTargets(long queens, long occupied)
+    {
+        return bishopTargets(queens, occupied) | rookTargets(queens, occupied);
+    }
+
+    private long whitePawnSinglePushTargets(long whitePawns, long empty)
+    {
+        return northOne(whitePawns) & empty;
+    }
+
+    private long blackPawnSinglePushTargets(long blackPawns, long empty)
+    {
+        return southOne(blackPawns) & empty;
+    }
+
+    private long whitePawnDoublePushTargets(long whitePawns, long empty)
+    {
+        long singlePush = whitePawnSinglePushTargets(whitePawns, empty);
+        return whitePawnSinglePushTargets(singlePush, empty) & BB_RANK_4;
+    }
+
+    private long blackPawnDoublePushTargets(long blackPawns, long empty)
+    {
+        long singlePush = blackPawnSinglePushTargets(blackPawns, empty);
+        return blackPawnSinglePushTargets(singlePush, empty) & BB_RANK_5;
+    }
+
+    private long whitePawnsEastAttackTargets(long whitePawns)
+    {
+        return NE1(whitePawns);
+    }
+
+    private long whitePawnsWestAttackTargets(long whitePawns)
+    {
+        return NW1(whitePawns);
+    }
+
+    private long blackPawnsEastAttackTargets(long blackPawns)
+    {
+        return SE1(blackPawns);
+    }
+
+    private long blackPawnsWestAttackTargets(long blackPawns)
+    {
+        return SW1(blackPawns);
+    }
+
+    private long shift(long x, int s)
+    {
+        return (s > 0) ? (x << s) : (x >>> -s);
+    }
+
+    private long northOne(long bb)
+    {
+        return shift(bb, BOARD_DIM);
+    }
+
+    private long southOne(long bb)
+    {
+        return shift(bb, -BOARD_DIM);
+    }
+
+    private long eastOne(long bb)
+    {
+        return shift(bb, 1) & ~BB_FILE_A;
+    }
+
+    private long westOne(long bb)
+    {
+        return shift(bb, -1) & ~BB_FILE_H;
+    }
+
+    private long NE1(long bb)
+    {
+        return shift(bb, 9) & ~BB_FILE_A;
+    }
+
+    private long NW1(long bb)
+    {
+        return shift(bb, 7) & ~BB_FILE_H;
+    }
+
+    private long SE1(long bb)
+    {
+        return shift(bb, -7) & ~BB_FILE_A;
+    }
+
+    private long SW1(long bb)
+    {
+        return shift(bb, -9) & ~BB_FILE_H;
     }
 }

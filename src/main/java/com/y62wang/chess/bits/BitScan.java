@@ -8,7 +8,7 @@ public class BitScan
      * @param number
      * @return index of the LS1B
      */
-    public static int scanForward(long number)
+    public static int ls1b(long number)
     {
         assert (number != 0);
         int index = 0;
@@ -21,6 +21,7 @@ public class BitScan
             }
             index++;
         }
+        assert false;
         return -1;
     }
 }

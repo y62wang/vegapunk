@@ -1,8 +1,7 @@
 package com.y62wang.chess;
 
-import java.util.stream.IntStream;
+import com.y62wang.chess.bits.BitScan;
 
-import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 import static com.y62wang.chess.BoardUtil.isWithinDimension;
 
@@ -31,15 +30,8 @@ public class King
         }
     }
 
-    public static long kingAttacks(int square)
+    public static long kingTargets(int square)
     {
         return ATTACKS[square];
-    }
-
-    public static void main(String[] args)
-    {
-        IntStream.range(0, 64).forEach(
-                num -> Util.printBitboard(kingAttacks(num))
-                                      );
     }
 }

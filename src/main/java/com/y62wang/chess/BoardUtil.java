@@ -66,7 +66,7 @@ public class BoardUtil
         List<Integer> list = new ArrayList<>();
         while (bb != 0)
         {
-            int ls1b = BitScan.scanForward(bb);
+            int ls1b = BitScan.ls1b(bb);
             list.add(ls1b);
             bb = bb & ~(1L << ls1b);
         }

@@ -18,8 +18,24 @@ import static com.y62wang.chess.magic.MagicConstants.ROOK_MAGIC_BITS;
 
 public class MagicCache
 {
+    private static MagicCache INSTANCE;
+
     private final Magic[] bishopMagic;
     private final Magic[] rookMagic;
+
+    static
+    {
+        INSTANCE = new MagicCache();
+    }
+
+    public static synchronized MagicCache getInstance()
+    {
+        if (INSTANCE == null)
+        {
+            INSTANCE = new MagicCache();
+        }
+        return INSTANCE;
+    }
 
     public MagicCache()
     {
@@ -61,7 +77,7 @@ public class MagicCache
      * The occupancyBits indicates which of the square should be set.
      *
      * @param occupiedSquares squares that could be set
-     * @param occupancyBits   bit at position N indicates the square occupiedSquares.get(N) should bet set
+     * @param occupancyBits   bit at position N indicates the square occupied.get(N) should bet set
      * @return BB with set occupancies
      */
     private static long getOccupiedSquares(List<Integer> occupiedSquares, long occupancyBits)
@@ -90,7 +106,7 @@ public class MagicCache
         return magic.getAttacks(blockers);
     }
 
-    public long getQueenAttacks(int square, long blockers)
+    public long queenAttacks(int square, long blockers)
     {
         return bishopAttacks(square, blockers) | rookAttacks(square, blockers);
     }
