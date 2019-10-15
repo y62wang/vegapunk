@@ -348,6 +348,26 @@ public class Bitboard
         return blackPawnSinglePushTargets(singlePush, empty) & BB_RANK_5;
     }
 
+    private long whitePawnsEastAttackTargets(long whitePawns)
+    {
+        return NE1(whitePawns);
+    }
+
+    private long whitePawnsWestAttackTargets(long whitePawns)
+    {
+        return NW1(whitePawns);
+    }
+
+    private long blackPawnsEastAttackTargets(long blackPawns)
+    {
+        return SE1(blackPawns);
+    }
+
+    private long blackPawnsWestAttackTargets(long blackPawns)
+    {
+        return SW1(blackPawns);
+    }
+
     private List<Short> pseudoMovesWhite()
     {
         List<Short> moves = new ArrayList<>();
@@ -426,26 +446,6 @@ public class Bitboard
             }
         }
         return moves;
-    }
-
-    private long whitePawnsEastAttackTargets(long whitePawns)
-    {
-        return NE1(whitePawns);
-    }
-
-    private long whitePawnsWestAttackTargets(long whitePawns)
-    {
-        return NW1(whitePawns);
-    }
-
-    private long blackPawnsEastAttackTargets(long blackPawns)
-    {
-        return SE1(blackPawns);
-    }
-
-    private long blackPawnsWestAttackTargets(long blackPawns)
-    {
-        return SW1(blackPawns);
     }
 
     private long shift(long x, int s)
