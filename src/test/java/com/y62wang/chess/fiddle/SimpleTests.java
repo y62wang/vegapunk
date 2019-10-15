@@ -36,6 +36,6 @@ public class SimpleTests
         };
         Bitboard board = new Bitboard(boardArray, Bitboard.WHITE);
         System.out.println(board);
-        board.targets();
+        board.debug();
     }
 }

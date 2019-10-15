@@ -94,21 +94,21 @@ public class MagicCache
         return result;
     }
 
-    public long rookAttacks(int square, long blockers)
+    public long rookAttacks(int square, long occupied)
     {
         Magic magic = rookMagic[square];
-        return magic.getAttacks(blockers);
+        return magic.getAttacks(occupied);
     }
 
-    public long bishopAttacks(int square, long blockers)
+    public long bishopAttacks(int square, long occupied)
     {
         Magic magic = bishopMagic[square];
-        return magic.getAttacks(blockers);
+        return magic.getAttacks(occupied);
     }
 
-    public long queenAttacks(int square, long blockers)
+    public long queenAttacks(int square, long occupied)
     {
-        return bishopAttacks(square, blockers) | rookAttacks(square, blockers);
+        return bishopAttacks(square, occupied) | rookAttacks(square, occupied);
     }
 
     public static void main(String[] args)

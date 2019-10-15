@@ -4,6 +4,10 @@ import com.y62wang.chess.bits.BitScan;
 import com.y62wang.chess.bits.Endianess;
 import com.y62wang.chess.magic.MagicCache;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_FILE_A;
@@ -244,6 +248,16 @@ public class Bitboard
         return ~occupied();
     }
 
+    private long whitePieces()
+    {
+        return WP | WN | WB | WR | WK | WQ;
+    }
+
+    private long blackPieces()
+    {
+        return BP | BN | BB | BR | BK | BQ;
+    }
+
     public long targets()
     {
         long occupied = occupied();
@@ -334,6 +348,86 @@ public class Bitboard
         return blackPawnSinglePushTargets(singlePush, empty) & BB_RANK_5;
     }
 
+    private List<Short> pseudoMovesWhite()
+    {
+        List<Short> moves = new ArrayList<>();
+        long opponentPieces = blackPieces();
+        long occupied = occupied();
+
+        moves.addAll(pseudoBishopMoves(WB, opponentPieces, occupied));
+        moves.addAll(pseudoRookMoves(WR, opponentPieces, occupied));
+        moves.addAll(pseudoQueenMoves(WQ, opponentPieces, occupied));
+        moves.addAll(pseudoKingMoves(WK, opponentPieces, occupied));
+        moves.addAll(pseudoKnightMoves(WN, opponentPieces, occupied));
+
+        return moves;
+    }
+
+    private List<Short> pseudoKingMoves(long king, long opponentPieces, long occupied)
+    {
+        return pseudoNonSlidingMoves(king, opponentPieces, occupied, King::kingTargets);
+    }
+
+    private List<Short> pseudoKnightMoves(long knights, long opponentPieces, long occupied)
+    {
+        return pseudoNonSlidingMoves(knights, opponentPieces, occupied, Knight::knightTargets);
+    }
+
+    private List<Short> pseudoRookMoves(long rooks, long opponentPieces, long occupied)
+    {
+        return pseudoSlidingMoves(rooks, opponentPieces, occupied, MagicCache.getInstance()::rookAttacks);
+    }
+
+    private List<Short> pseudoBishopMoves(long bishops, long opponentPieces, long occupied)
+    {
+        return pseudoSlidingMoves(bishops, opponentPieces, occupied, MagicCache.getInstance()::bishopAttacks);
+    }
+
+    private List<Short> pseudoQueenMoves(long queens, long opponentPieces, long occupied)
+    {
+        return pseudoSlidingMoves(queens, opponentPieces, occupied, MagicCache.getInstance()::queenAttacks);
+    }
+
+    private List<Short> pseudoSlidingMoves(long sliders, long opponentPieces, long occupied, BiFunction<Integer, Long, Long> magicFn)
+    {
+        List<Short> moves = new ArrayList<>();
+        while (sliders != 0)
+        {
+            int sliderSq = BitScan.ls1b(sliders);
+            sliders &= ~shift(1L, sliderSq);
+            long attackSet = magicFn.apply(sliderSq, occupied);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSq = BitScan.ls1b(attackSet);
+                attackSet &= ~shift(1L, toSq);
+                short moveType = intersects(BoardUtil.squareBB(toSq), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(sliderSq, toSq, moveType));
+            }
+        }
+        return moves;
+    }
+
+    private List<Short> pseudoNonSlidingMoves(long fromBB, long opponentPieces, long occupied, Function<Integer, Long> fn)
+    {
+        List<Short> moves = new ArrayList<>();
+        while (fromBB != 0)
+        {
+            int fromSq = BitScan.ls1b(fromBB);
+            fromBB &= ~shift(1L, fromSq);
+            long attackSet = fn.apply(fromSq);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSq = BitScan.ls1b(attackSet);
+                attackSet &= ~shift(1L, toSq);
+                short moveType = intersects(BoardUtil.squareBB(toSq), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(fromSq, toSq, moveType));
+            }
+        }
+        return moves;
+    }
+
     private long whitePawnsEastAttackTargets(long whitePawns)
     {
         return NE1(whitePawns);
@@ -397,5 +491,17 @@ public class Bitboard
     private long SW1(long bb)
     {
         return shift(bb, -9) & ~BB_FILE_H;
+    }
+
+    private boolean intersects(long a, long b)
+    {
+        return (a & b) != 0;
+    }
+
+    public void debug()
+    {
+//        pseudoKingMoves(BK, whitePieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
+//        pseudoKnightMoves(WN, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
+        pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
     }
 }
