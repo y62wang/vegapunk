@@ -33,7 +33,7 @@ public class Move
 
         short move = 0;
         move |= (SQUARE_MASK & from) << 10;
-        move |= (SQUARE_MASK & to) << 6;
+        move |= (SQUARE_MASK & to) << 4;
         move |= (MOVE_TYPE_MASK & code);
         return move;
     }
@@ -77,5 +77,27 @@ public class Move
     public static boolean isPromoCapture(short move)
     {
         return isPromotion(move) && isCapture(move);
+    }
+
+    public static int fromSquare(short move)
+    {
+        // bit shift will return an int, with padded 1's if the number is negative
+        // therefore masking is required
+        return (move >>> 10) & SQUARE_MASK;
+    }
+
+    public static int toSquare(short move)
+    {
+        return (move >>> 4) & SQUARE_MASK;
+    }
+
+    public static int moveCode(short move)
+    {
+        return move & MOVE_TYPE_MASK;
+    }
+
+    public static String moveString(short move)
+    {
+        return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
 }

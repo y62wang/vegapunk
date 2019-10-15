@@ -4,6 +4,7 @@ import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.BoardUtil;
 import com.y62wang.chess.CharacterUtilities;
 import com.y62wang.chess.BoardConstants;
+import com.y62wang.chess.Move;
 import com.y62wang.chess.Util;
 import org.junit.Test;
 
