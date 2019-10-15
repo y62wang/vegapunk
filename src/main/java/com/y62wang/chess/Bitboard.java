@@ -244,6 +244,20 @@ public class Bitboard
         return ~occupied();
     }
 
+    public long targets()
+    {
+        long occupied = occupied();
+        long targets = kingTargets(WK)
+                       | queenTargets(WQ, occupied)
+                       | knightTargets(WN)
+                       | rookTargets(WR, occupied)
+                       | bishopTargets(WB, occupied)
+                       | whitePawnsEastAttackTargets(WP)
+                       | whitePawnsWestAttackTargets(WP);
+        Util.printBitboard(targets);
+        return targets;
+    }
+
     private long knightTargets(long knights)
     {
         long targets = 0;

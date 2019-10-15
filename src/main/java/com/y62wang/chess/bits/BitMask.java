@@ -4,11 +4,25 @@ public class BitMask
 {
     public static final long MASK_8_BITS = getMask(8);
 
-    public static long getMask(int bits) {
-        return (1 << bits) -1;
+    /**
+     * get an n-bits mask at least significant bits
+     *
+     * @param n number of bits for the mask
+     * @return
+     */
+    public static long getMask(int n)
+    {
+        return (1 << n) - 1;
     }
 
-    public static long getMask(int bits, int leftShift) {
-        return getMask(bits) << leftShift;
+    /**
+     * get an n-bits mask with left shift
+     * @param n
+     * @param leftShift
+     * @return n-bits with left shift
+     */
+    public static long getMask(int n, int leftShift)
+    {
+        return getMask(n) << leftShift;
     }
 }
