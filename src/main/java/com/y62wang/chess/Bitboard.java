@@ -18,6 +18,8 @@ import static com.y62wang.chess.BoardConstants.BB_RANK_5;
 import static com.y62wang.chess.BoardConstants.BB_RANK_8;
 import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
+import static com.y62wang.chess.BoardConstants.RANK_4;
+import static com.y62wang.chess.BoardConstants.RANK_5;
 import static com.y62wang.chess.BoardConstants.RANK_8;
 
 public class Bitboard
@@ -438,6 +440,7 @@ public class Bitboard
         addPawnPromotions(promotionAttacksNE, Direction.NORTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, moves);
 
+        addEnPassantForWhite(moves);
         return moves;
     }
 
@@ -468,6 +471,8 @@ public class Bitboard
         addPawnPromotions(promotionAttacksSE, Direction.SOUTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksSW, Direction.SOUTH_WEST, true, moves);
 
+        addEnPassantForBlack(moves);
+
         return moves;
     }
 
@@ -496,6 +501,54 @@ public class Bitboard
         }
     }
 
+    private void addEnPassantForWhite(List<Short> moves)
+    {
+        int enpassantFile = this.enPassantTarget - 1;
+        if (enpassantFile < 0)
+        {
+            return;
+        }
+
+        long targetBB = BoardUtil.squareBB(enpassantFile, RANK_5);
+        int target = BoardUtil.square(enpassantFile, RANK_5);
+
+        assert !(intersects(targetBB, occupied()));
+
+        if (intersects(NE1(WP), targetBB))
+        {
+            moves.add(Move.move(target + Direction.SOUTH_WEST, target, Move.EP_CAPTURE));
+        }
+
+        if (intersects(NW1(WP), targetBB))
+        {
+            moves.add(Move.move(target + Direction.SOUTH_EAST, target, Move.EP_CAPTURE));
+        }
+    }
+
+    private void addEnPassantForBlack(List<Short> moves)
+    {
+        int enpassantFile = this.enPassantTarget - 1;
+        if (enpassantFile < 0)
+        {
+            return;
+        }
+
+        long targetBB = BoardUtil.squareBB(enpassantFile, RANK_4);
+        int target = BoardUtil.square(enpassantFile, RANK_4);
+
+        assert !(intersects(targetBB, occupied()));
+
+        if (intersects(SE1(BP), targetBB))
+        {
+            moves.add(Move.move(target + Direction.NORTH_WEST, target, Move.EP_CAPTURE));
+        }
+
+        if (intersects(SW1(BP), targetBB))
+        {
+            moves.add(Move.move(target + Direction.NORTH_EAST, target, Move.EP_CAPTURE));
+        }
+    }
+
     private void addPawnMoves(long targetSquares, int shift, short moveType, List<Short> moves)
     {
         while (targetSquares != 0)
@@ -508,7 +561,6 @@ public class Bitboard
             {
                 if (Move.isCapture(moveType))
                 {
-
                     moves.add(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMO_CAPTURE));
                     moves.add(Move.move(fromSquare, toSquare, Move.BISHOP_PROMO_CAPTURE));
                     moves.add(Move.move(fromSquare, toSquare, Move.ROOK_PROMO_CAPTURE));
@@ -624,6 +676,6 @@ public class Bitboard
 //        pseudoKingMoves(BK, whitePieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
 //        pseudoKnightMoves(WN, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
         // pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
-        pseudoWhitePawnMoves(WP,blackPieces(),occupied()).forEach(s -> System.out.println(Move.moveString(s)));
+        pseudoWhitePawnMoves(WP, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
     }
 }
