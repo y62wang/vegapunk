@@ -98,6 +98,13 @@ public class Move
 
     public static String moveString(short move)
     {
+        if(moveCode(move) == KING_CASTLE) {
+            return "O-O";
+        }
+        else if (moveCode(move) == QUEEN_CASTLE)
+        {
+            return "O-O-O";
+        }
         return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
 }

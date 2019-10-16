@@ -34,6 +34,7 @@ public class SimpleTests
                 'P', 'P', 'P', 'n', ' ', 'P', 'P', 'P',
                 'R', ' ', ' ', 'B', ' ', 'K', ' ', 'R',
         };
+
         Bitboard board = new Bitboard(boardArray, Bitboard.WHITE);
         System.out.println(board);
         board.debug();

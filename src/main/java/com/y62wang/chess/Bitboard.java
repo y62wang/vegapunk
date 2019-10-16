@@ -21,6 +21,22 @@ import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
 import static com.y62wang.chess.BoardConstants.RANK_4;
 import static com.y62wang.chess.BoardConstants.RANK_5;
 import static com.y62wang.chess.BoardConstants.RANK_8;
+import static com.y62wang.chess.BoardConstants.SQ_A1;
+import static com.y62wang.chess.BoardConstants.SQ_A8;
+import static com.y62wang.chess.BoardConstants.SQ_B1;
+import static com.y62wang.chess.BoardConstants.SQ_B8;
+import static com.y62wang.chess.BoardConstants.SQ_C1;
+import static com.y62wang.chess.BoardConstants.SQ_C8;
+import static com.y62wang.chess.BoardConstants.SQ_D1;
+import static com.y62wang.chess.BoardConstants.SQ_D8;
+import static com.y62wang.chess.BoardConstants.SQ_E1;
+import static com.y62wang.chess.BoardConstants.SQ_E8;
+import static com.y62wang.chess.BoardConstants.SQ_F1;
+import static com.y62wang.chess.BoardConstants.SQ_F8;
+import static com.y62wang.chess.BoardConstants.SQ_G1;
+import static com.y62wang.chess.BoardConstants.SQ_G8;
+import static com.y62wang.chess.BoardConstants.SQ_H1;
+import static com.y62wang.chess.BoardConstants.SQ_H8;
 
 public class Bitboard
 {
@@ -82,6 +98,10 @@ public class Bitboard
     public Bitboard(char[] board)
     {
         assignPiece(board);
+        WKCastle = true;
+        WQCastle = true;
+        BKCastle = true;
+        BQCastle = true;
     }
 
     public Bitboard(Bitboard bitboard)
@@ -384,7 +404,8 @@ public class Bitboard
         moves.addAll(pseudoQueenMoves(WQ, opponentPieces, occupied));
         moves.addAll(pseudoKingMoves(WK, opponentPieces, occupied));
         moves.addAll(pseudoKnightMoves(WN, opponentPieces, occupied));
-
+        moves.addAll(pseudoWhitePawnMoves(WP, opponentPieces, occupied));
+        moves.addAll(pseudoWhiteCastles());
         return moves;
     }
 
@@ -441,6 +462,48 @@ public class Bitboard
         addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, moves);
 
         addEnPassantForWhite(moves);
+        return moves;
+    }
+
+    private List<Short> pseudoWhiteCastles()
+    {
+        List<Short> moves = new ArrayList<>();
+        if (((BoardUtil.position(SQ_F1, SQ_G1)) & occupied()) == 0
+            && (WK & BoardUtil.squareBB(SQ_E1)) != 0
+            && (WR & BoardUtil.squareBB(SQ_H1)) != 0
+            && this.WKCastle)
+        {
+            moves.add(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
+        }
+
+        if ((BoardUtil.position(SQ_B1, SQ_C1, SQ_D1) & occupied()) == 0
+            && (WK & BoardUtil.squareBB(SQ_E1)) != 0
+            && (WR & BoardUtil.squareBB(SQ_A1)) != 0
+            && this.WQCastle)
+        {
+            moves.add(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
+        }
+        return moves;
+    }
+
+    private List<Short> pseudoBlackCastles()
+    {
+        List<Short> moves = new ArrayList<>();
+        if (((BoardUtil.position(SQ_F8, SQ_G8)) & occupied()) == 0
+            && (BK & BoardUtil.squareBB(SQ_E8)) != 0
+            && (BR & BoardUtil.squareBB(SQ_H8)) != 0
+            && this.BKCastle)
+        {
+            moves.add(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
+        }
+
+        if ((BoardUtil.position(SQ_B8, SQ_C8, SQ_D8) & occupied()) == 0
+            && (BK & BoardUtil.squareBB(SQ_E8)) != 0
+            && (BR & BoardUtil.squareBB(SQ_A8)) != 0
+            && this.BQCastle)
+        {
+            moves.add(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
+        }
         return moves;
     }
 
@@ -675,7 +738,9 @@ public class Bitboard
     {
 //        pseudoKingMoves(BK, whitePieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
 //        pseudoKnightMoves(WN, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
-        // pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
-        pseudoWhitePawnMoves(WP, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
+        pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
+        // pseudoWhitePawnMoves(WP, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
+//        long bp = blackPieces();
+//        pseudoWhiteCastles().forEach(s -> System.out.println(Move.moveString(s)));
     }
 }
