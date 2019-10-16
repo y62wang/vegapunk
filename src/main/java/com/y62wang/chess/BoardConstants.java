@@ -55,8 +55,5 @@ public class BoardConstants
     public static final int RANK_8 = 7;
 
     public static final long OUTER_BOARD = BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8;
-    /**
-     * The constant INNER_BOARD.
-     */
     public static final long INNER_BOARD = ~(BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8);
 }

@@ -12,10 +12,13 @@ import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_FILE_A;
 import static com.y62wang.chess.BoardConstants.BB_FILE_H;
+import static com.y62wang.chess.BoardConstants.BB_RANK_1;
 import static com.y62wang.chess.BoardConstants.BB_RANK_4;
 import static com.y62wang.chess.BoardConstants.BB_RANK_5;
+import static com.y62wang.chess.BoardConstants.BB_RANK_8;
 import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
+import static com.y62wang.chess.BoardConstants.RANK_8;
 
 public class Bitboard
 {
@@ -243,7 +246,7 @@ public class Bitboard
         return WP | WN | WB | WR | WK | WQ | BP | BN | BB | BR | BK | BQ;
     }
 
-    private long unoccupied()
+    private long emptySquares()
     {
         return ~occupied();
     }
@@ -408,6 +411,124 @@ public class Bitboard
         return pseudoSlidingMoves(queens, opponentPieces, occupied, MagicCache.getInstance()::queenAttacks);
     }
 
+    private List<Short> pseudoWhitePawnMoves(long whitePawns, long opponentPieces, long occupied)
+    {
+        List<Short> moves = new ArrayList<>();
+
+        long empty = emptySquares();
+        long blackPieces = blackPieces();
+
+        long singlePushes = whitePawnSinglePushTargets(whitePawns, empty) & ~BB_RANK_8;
+        long doublePushes = whitePawnDoublePushTargets(whitePawns, empty);
+        long attacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
+        long attacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
+
+        long promotionsNE = whitePawnsEastAttackTargets(whitePawns) & BB_RANK_8;
+        long promotionsNW = whitePawnsWestAttackTargets(whitePawns) & BB_RANK_8;
+        long promotionAttacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
+        long promotionAttacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
+
+        addPawnMoves(singlePushes, Direction.NORTH, Move.QUIET_MOVE, moves);
+        addPawnMoves(doublePushes, Direction.NORTH * 2, Move.DOUBLE_PAWN_PUSH, moves);
+        addPawnMoves(attacksNE, Direction.NORTH_EAST, Move.CAPTURES, moves);
+        addPawnMoves(attacksNW, Direction.NORTH_WEST, Move.CAPTURES, moves);
+
+        addPawnPromotions(promotionsNE, Direction.NORTH_EAST, false, moves);
+        addPawnPromotions(promotionsNW, Direction.NORTH_WEST, false, moves);
+        addPawnPromotions(promotionAttacksNE, Direction.NORTH_EAST, true, moves);
+        addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, moves);
+
+        return moves;
+    }
+
+    private List<Short> pseudoBlackPawnMoves(long blackPawns, long opponentPieces, long occupied)
+    {
+        List<Short> moves = new ArrayList<>();
+
+        long empty = emptySquares();
+        long whitePieces = whitePieces();
+
+        long singlePushes = blackPawnSinglePushTargets(blackPawns, empty) & ~BB_RANK_1;
+        long doublePushes = blackPawnDoublePushTargets(blackPawns, empty);
+        long attacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
+        long attacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
+
+        long promotionsSE = blackPawnsEastAttackTargets(blackPawns) & BB_RANK_1;
+        long promotionsSW = blackPawnsWestAttackTargets(blackPawns) & BB_RANK_1;
+        long promotionAttacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
+        long promotionAttacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
+
+        addPawnMoves(singlePushes, Direction.SOUTH, Move.QUIET_MOVE, moves);
+        addPawnMoves(doublePushes, Direction.SOUTH * 2, Move.DOUBLE_PAWN_PUSH, moves);
+        addPawnMoves(attacksSE, Direction.SOUTH_EAST, Move.CAPTURES, moves);
+        addPawnMoves(attacksSW, Direction.SOUTH_WEST, Move.CAPTURES, moves);
+
+        addPawnPromotions(promotionsSE, Direction.SOUTH_EAST, false, moves);
+        addPawnPromotions(promotionsSW, Direction.SOUTH_WEST, false, moves);
+        addPawnPromotions(promotionAttacksSE, Direction.SOUTH_EAST, true, moves);
+        addPawnPromotions(promotionAttacksSW, Direction.SOUTH_WEST, true, moves);
+
+        return moves;
+    }
+
+    private void addPawnPromotions(long targetSquares, int shift, boolean isCapture, List<Short> moves)
+    {
+        while (targetSquares != 0)
+        {
+            int toSquare = BitScan.ls1b(targetSquares);
+            int fromSquare = toSquare - shift;
+            targetSquares &= ~BoardUtil.squareBB(toSquare);
+
+            if (isCapture)
+            {
+                moves.add(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMO_CAPTURE));
+                moves.add(Move.move(fromSquare, toSquare, Move.BISHOP_PROMO_CAPTURE));
+                moves.add(Move.move(fromSquare, toSquare, Move.ROOK_PROMO_CAPTURE));
+                moves.add(Move.move(fromSquare, toSquare, Move.QUEEN_PROMO_CAPTURE));
+            }
+            else
+            {
+                moves.add(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMOTION));
+                moves.add(Move.move(fromSquare, toSquare, Move.BISHOP_PROMOTION));
+                moves.add(Move.move(fromSquare, toSquare, Move.ROOK_PROMOTION));
+                moves.add(Move.move(fromSquare, toSquare, Move.QUEEN_PROMOTION));
+            }
+        }
+    }
+
+    private void addPawnMoves(long targetSquares, int shift, short moveType, List<Short> moves)
+    {
+        while (targetSquares != 0)
+        {
+            int toSquare = BitScan.ls1b(targetSquares);
+            int fromSquare = toSquare - shift;
+            targetSquares &= ~BoardUtil.squareBB(toSquare);
+
+            if (Move.isPromotion(moveType))
+            {
+                if (Move.isCapture(moveType))
+                {
+
+                    moves.add(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMO_CAPTURE));
+                    moves.add(Move.move(fromSquare, toSquare, Move.BISHOP_PROMO_CAPTURE));
+                    moves.add(Move.move(fromSquare, toSquare, Move.ROOK_PROMO_CAPTURE));
+                    moves.add(Move.move(fromSquare, toSquare, Move.QUEEN_PROMO_CAPTURE));
+                }
+                else
+                {
+                    moves.add(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMOTION));
+                    moves.add(Move.move(fromSquare, toSquare, Move.BISHOP_PROMOTION));
+                    moves.add(Move.move(fromSquare, toSquare, Move.ROOK_PROMOTION));
+                    moves.add(Move.move(fromSquare, toSquare, Move.QUEEN_PROMOTION));
+                }
+            }
+            else
+            {
+                moves.add(Move.move(fromSquare, toSquare, moveType));
+            }
+        }
+    }
+
     private List<Short> pseudoSlidingMoves(long sliders, long opponentPieces, long occupied, BiFunction<Integer, Long, Long> magicFn)
     {
         List<Short> moves = new ArrayList<>();
@@ -419,10 +540,10 @@ public class Bitboard
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
             {
-                int toSq = BitScan.ls1b(attackSet);
-                attackSet &= ~shift(1L, toSq);
-                short moveType = intersects(BoardUtil.squareBB(toSq), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
-                moves.add(Move.move(sliderSq, toSq, moveType));
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~BoardUtil.squareBB(toSquare);
+                short moveType = intersects(BoardUtil.squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(sliderSq, toSquare, moveType));
             }
         }
         return moves;
@@ -439,10 +560,10 @@ public class Bitboard
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
             {
-                int toSq = BitScan.ls1b(attackSet);
-                attackSet &= ~shift(1L, toSq);
-                short moveType = intersects(BoardUtil.squareBB(toSq), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
-                moves.add(Move.move(fromSq, toSq, moveType));
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~BoardUtil.squareBB(toSquare);
+                short moveType = intersects(BoardUtil.squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(fromSq, toSquare, moveType));
             }
         }
         return moves;
@@ -502,6 +623,7 @@ public class Bitboard
     {
 //        pseudoKingMoves(BK, whitePieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
 //        pseudoKnightMoves(WN, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
-        pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
+        // pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
+        pseudoWhitePawnMoves(WP,blackPieces(),occupied()).forEach(s -> System.out.println(Move.moveString(s)));
     }
 }
