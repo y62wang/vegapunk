@@ -110,12 +110,4 @@ public class MagicCache
     {
         return bishopAttacks(square, occupied) | rookAttacks(square, occupied);
     }
-
-    public static void main(String[] args)
-    {
-        MagicCache magicCache = new MagicCache();
-        long pos = BoardUtil.position(4) | BB_RANK_2;
-        long result = magicCache.rookAttacks(0, pos);
-        Util.printBitboard(result);
-    }
 }

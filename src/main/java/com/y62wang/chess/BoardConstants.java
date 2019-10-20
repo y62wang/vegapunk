@@ -128,6 +128,11 @@ public class BoardConstants
     public static final int SQ_H7 = SQ_G7 + 1;
     public static final int SQ_H8 = SQ_G8 + 1;
 
+    public static final int BB_A1 = BoardUtil.square(0,0);
+    public static final int BB_A8 = BoardUtil.square(0,7);
+    public static final int BB_H1 = BoardUtil.square(7,0);
+    public static final int BB_H8 = BoardUtil.square(7,7);
+
     public static final long OUTER_BOARD = BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8;
     public static final long INNER_BOARD = ~(BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8);
     public static final long W_KING_CASTLE_MASK = position(SQ_F1, SQ_G1);
