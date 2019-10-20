@@ -26,8 +26,10 @@ import static com.y62wang.chess.BoardConstants.BOARD_DIM;
 import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_MASK;
 import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_MASK;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
+import static com.y62wang.chess.BoardConstants.RANK_3;
 import static com.y62wang.chess.BoardConstants.RANK_4;
 import static com.y62wang.chess.BoardConstants.RANK_5;
+import static com.y62wang.chess.BoardConstants.RANK_6;
 import static com.y62wang.chess.BoardConstants.SQ_A1;
 import static com.y62wang.chess.BoardConstants.SQ_A8;
 import static com.y62wang.chess.BoardConstants.SQ_C1;
@@ -63,14 +65,17 @@ public class Bitboard
     private static final short BK_CASTLE_MASK = (1 << 3) - 1;
     private static final short BQ_CASTLE_MASK = (1 << 4) - 1;
     private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
+    public static final int NO_EP_TARGET = -1;
     private short castleRights;
 
     public static byte WHITE = 0;
     public static byte BLACK = 1;
 
     private long WP, WN, WB, WR, WK, WQ, BP, BN, BB, BR, BK, BQ;
-    private int enPassantTarget;
+    private int enPassantTarget = NO_EP_TARGET;
     private byte turn;
+
+    public short rootMove;
 
     public Bitboard(long[][] bitBoards, byte turn, int enPassantTarget, short castleRights)
     {
@@ -128,13 +133,13 @@ public class Bitboard
                 sb.append(c);
             }
         }
-        assignPiece(sb.toString().toCharArray());
+        assignPiece(CharacterUtilities.toLittleEndianBoard(sb.toString().toCharArray()));
         turn = ( byte ) (tokens[1].equalsIgnoreCase("w") ? 0 : 1);
         castleRights |= tokens[2].contains("K") ? 1 : 0;
         castleRights |= tokens[2].contains("Q") ? (1 << 1) : 0;
         castleRights |= tokens[2].contains("k") ? (1 << 2) : 0;
         castleRights |= tokens[2].contains("q") ? (1 << 3) : 0;
-        enPassantTarget = tokens[4].equals("-") ? 0 : Integer.parseInt(tokens[4]) - 1;
+        enPassantTarget = tokens[3].equals("-") ? -1 : Integer.parseInt(tokens[3]) - 1;
     }
 
     public Bitboard(char[] board)
@@ -328,10 +333,10 @@ public class Bitboard
     {
         long occupied = occupied();
         long targets = kingTargets(WK)
-                       | queenTargets(WQ, occupied)
+                       | queenTargets(WQ, occupied & ~BK)
                        | knightTargets(WN)
-                       | rookTargets(WR, occupied)
-                       | bishopTargets(WB, occupied)
+                       | rookTargets(WR, occupied & ~BK)
+                       | bishopTargets(WB, occupied & ~BK)
                        | whitePawnsEastAttackTargets(WP)
                        | whitePawnsWestAttackTargets(WP);
         return targets;
@@ -341,12 +346,12 @@ public class Bitboard
     {
         long occupied = occupied();
         long targets = kingTargets(BK)
-                       | queenTargets(BQ, occupied)
+                       | queenTargets(BQ, occupied & ~WK)
                        | knightTargets(BN)
-                       | rookTargets(BR, occupied)
-                       | bishopTargets(BB, occupied)
-                       | whitePawnsEastAttackTargets(BP)
-                       | whitePawnsWestAttackTargets(BP);
+                       | rookTargets(BR, occupied & ~WK)
+                       | bishopTargets(BB, occupied & ~WK)
+                       | blackPawnsEastAttackTargets(BP)
+                       | blackPawnsWestAttackTargets(BP);
         return targets;
     }
 
@@ -358,41 +363,53 @@ public class Bitboard
         assert (intersects(from, occupied()));
 
         long[][] board = new long[][] {{WK, WQ, WR, WB, WN, WP}, {BK, BQ, BR, BB, BN, BP}};
-        int colorIndex = intersects(whitePieces(), from) ? 0 : 1;
+        int myColor = intersects(whitePieces(), from) ? 0 : 1;
+        int opponentColor = 1 - myColor;
 
-        if (!Move.isPromotion(move))
+        if (Move.isPromotion(move))
         {
-
+            removePiece(from, board[myColor]);
             if (Move.isCapture(move))
             {
-                removePiece(to, board);
-            }
-            movePiece(from, to, board);
-        }
-        else
-        {
-            removePiece(from, board);
-            if (Move.isCapture(move))
-            {
-                removePiece(to, board);
+                removePiece(to, board[opponentColor]);
             }
 
             if (Move.moveCode(move) == Move.QUEEN_PROMOTION || Move.moveCode(move) == Move.QUEEN_PROMO_CAPTURE)
             {
-                board[colorIndex][QUEEN_INDEX] |= to;
+                board[myColor][QUEEN_INDEX] |= to;
             }
             else if (Move.moveCode(move) == Move.ROOK_PROMOTION || Move.moveCode(move) == Move.ROOK_PROMO_CAPTURE)
             {
-                board[colorIndex][ROOK_INDEX] |= to;
+                board[myColor][ROOK_INDEX] |= to;
             }
             else if (Move.moveCode(move) == Move.BISHOP_PROMOTION || Move.moveCode(move) == Move.BISHOP_PROMO_CAPTURE)
             {
-                board[colorIndex][BISHOP_INDEX] |= to;
+                board[myColor][BISHOP_INDEX] |= to;
             }
             else if (Move.moveCode(move) == Move.KNIGHT_PROMOTION || Move.moveCode(move) == Move.KNIGHT_PROMO_CAPTURE)
             {
-                board[colorIndex][KNIGHT_INDEX] |= to;
+                board[myColor][KNIGHT_INDEX] |= to;
             }
+        }
+        else if (Move.isEnpassant(move))
+        {
+            if (isWhiteTurn())
+            {
+                removePiece(southOne(to), board[BLACK]);
+            }
+            else
+            {
+                removePiece(northOne(to), board[WHITE]);
+            }
+            movePiece(from, to, board[myColor]);
+        }
+        else
+        {
+            if (Move.isCapture(move))
+            {
+                removePiece(to, board[opponentColor]);
+            }
+            movePiece(from, to, board[myColor]);
         }
 
         short updatedCastleRights = castleRights;
@@ -427,7 +444,7 @@ public class Bitboard
             updatedCastleRights = unsetCastleBit(updatedCastleRights, WK_CASTLE_MASK);
         }
 
-        int newEnPassantTarget = 0;
+        int newEnPassantTarget = NO_EP_TARGET;
         if (Move.isDoublePawnPush(move))
         {
             newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
@@ -435,34 +452,28 @@ public class Bitboard
         return new Bitboard(board, nextTurn(), newEnPassantTarget, updatedCastleRights);
     }
 
-    private void movePiece(long from, long to, long[][] board)
+    private void movePiece(long from, long to, long[] board)
     {
-        for (int color = 0; color < board.length; color++)
+        for (int pieceIndex = 0; pieceIndex < board.length; pieceIndex++)
         {
-            for (int pieceIndex = 0; pieceIndex < board[color].length; pieceIndex++)
+            long pieces = board[pieceIndex];
+            if (intersects(from, pieces))
             {
-                long pieces = board[color][pieceIndex];
-                if (intersects(from, pieces))
-                {
-                    board[color][pieceIndex] = (pieces & ~from) | to;
-                    return;
-                }
+                board[pieceIndex] = (pieces & ~from) | to;
+                return;
             }
         }
     }
 
-    private void removePiece(long target, long[][] board)
+    private void removePiece(long target, long[] board)
     {
-        for (int color = 0; color < board.length; color++)
+        for (int pieceIndex = 0; pieceIndex < board.length; pieceIndex++)
         {
-            for (int pieceIndex = 0; pieceIndex < board[color].length; pieceIndex++)
+            long pieces = board[pieceIndex];
+            if (intersects(target, pieces))
             {
-                long pieces = board[color][pieceIndex];
-                if (intersects(target, pieces))
-                {
-                    board[color][pieceIndex] = pieces & ~target;
-                    return;
-                }
+                board[pieceIndex] = pieces & ~target;
+                return;
             }
         }
     }
@@ -974,49 +985,47 @@ public class Bitboard
 
     private void addEnPassantForWhite(Set<Short> moves)
     {
-        int enpassantFile = this.enPassantTarget - 1;
+        int enpassantFile = this.enPassantTarget;
         if (enpassantFile < 0)
         {
             return;
         }
 
-        long targetBB = squareBB(enpassantFile, RANK_5);
-        int target = square(enpassantFile, RANK_5);
+        long targetPawnBB = squareBB(enpassantFile, RANK_5);
+        long targetSquareBB = squareBB(enpassantFile, RANK_6);
+        int targetSquare = square(enpassantFile, RANK_6);
 
-        assert !(intersects(targetBB, occupied()));
-
-        if (intersects(targetBB, BP) && intersects(NE1(WP), targetBB))
+        if (intersects(targetPawnBB, BP) && intersects(eastOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
         {
-            moves.add(Move.move(target + Direction.SOUTH_WEST, target, Move.EP_CAPTURE));
+            moves.add(Move.move(targetSquare + Direction.SOUTH_WEST, targetSquare, Move.EP_CAPTURE));
         }
 
-        if (intersects(targetBB, BP) && intersects(NW1(WP), targetBB))
+        if (intersects(targetPawnBB, BP) && intersects(westOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
         {
-            moves.add(Move.move(target + Direction.SOUTH_EAST, target, Move.EP_CAPTURE));
+            moves.add(Move.move(targetSquare + Direction.SOUTH_EAST, targetSquare, Move.EP_CAPTURE));
         }
     }
 
     private void addEnPassantForBlack(Set<Short> moves)
     {
-        int enpassantFile = this.enPassantTarget - 1;
+        int enpassantFile = this.enPassantTarget;
         if (enpassantFile < 0)
         {
             return;
         }
 
-        long targetBB = squareBB(enpassantFile, RANK_4);
-        int target = square(enpassantFile, RANK_4);
+        long targetPawnBB = squareBB(enpassantFile, RANK_4);
+        long targetSquareBB = squareBB(enpassantFile, RANK_3);
+        int targetSquare = square(enpassantFile, RANK_3);
 
-        assert !(intersects(targetBB, occupied()));
-
-        if (intersects(targetBB, WP) && intersects(SE1(BP), targetBB))
+        if (intersects(targetPawnBB, WP) && intersects(eastOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
         {
-            moves.add(Move.move(target + Direction.NORTH_WEST, target, Move.EP_CAPTURE));
+            moves.add(Move.move(targetSquare + Direction.NORTH_WEST, targetSquare, Move.EP_CAPTURE));
         }
 
-        if (intersects(targetBB, WP) && intersects(SW1(BP), targetBB))
+        if (intersects(targetPawnBB, WP) && intersects(westOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
         {
-            moves.add(Move.move(target + Direction.NORTH_EAST, target, Move.EP_CAPTURE));
+            moves.add(Move.move(targetSquare + Direction.NORTH_EAST, targetSquare, Move.EP_CAPTURE));
         }
     }
 

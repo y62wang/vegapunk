@@ -2,6 +2,7 @@ package com.y62wang.chess.programs;
 
 import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.Move;
+import com.y62wang.chess.ui.HumanPlayer;
 
 import java.util.List;
 import java.util.Random;
@@ -37,7 +38,7 @@ public class CommandLineGame
 
             if (board.isWhiteTurn())
             {
-                board = makeHumanMove(board, scanner);
+                board = HumanPlayer.makeHumanMove(board, scanner);
                 continue;
             }
             else
@@ -48,7 +49,7 @@ public class CommandLineGame
         }
     }
 
-    private static Bitboard makeComputerMove(final Bitboard board)
+    public static Bitboard makeComputerMove(final Bitboard board)
     {
         Random random = new Random(1L);
         List<Short> whiteLegal = board.legalMoves().stream().collect(Collectors.toList());
@@ -57,34 +58,4 @@ public class CommandLineGame
         return board.makeMove(move);
     }
 
-    private static Bitboard makeHumanMove(Bitboard board, Scanner scanner)
-    {
-        Set<Short> moves = board.legalMoves();
-        System.out.print("Enter a move: ");
-        String line = scanner.nextLine();
-        if (line.equals("cccc"))
-        {
-            makeComputerMove(board);
-        }
-        else if (line.length() != 4)
-        {
-            System.out.println("Invalid move: " + line);
-            return board;
-        }
-        short tempMove = Move.of(line.substring(0, 2), line.substring(2, 4));
-        boolean invalidMove = true;
-        for (short move : moves)
-        {
-            if (Move.fromSquare(tempMove) == Move.fromSquare(move) && Move.toSquare(tempMove) == Move.toSquare(move))
-            {
-                return board.makeMove(move);
-            }
-        }
-        if (invalidMove)
-        {
-            System.out.println("Invalid move: " + line);
-            return board;
-        }
-        return board;
-    }
 }

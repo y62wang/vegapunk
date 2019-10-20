@@ -66,17 +66,17 @@ public class Move
 
     public static boolean isCastle(short move)
     {
-        return move == KING_CASTLE || move == QUEEN_CASTLE;
+        return moveCode(move) == KING_CASTLE || moveCode(move) == QUEEN_CASTLE;
     }
 
     public static boolean isEnpassant(short move)
     {
-        return move == EP_CAPTURE;
+        return moveCode(move) == EP_CAPTURE;
     }
 
     public static boolean isDoublePawnPush(short move)
     {
-        return move == DOUBLE_PAWN_PUSH;
+        return moveCode(move) == DOUBLE_PAWN_PUSH;
     }
 
     public static boolean isPromoCapture(short move)

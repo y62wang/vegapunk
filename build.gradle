@@ -20,3 +20,13 @@ dependencies {
     compile group: 'com.google.guava', name: 'guava', version: '27.1-jre'
 }
 
+task debugger(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'com.y62wang.chess.programs.PerftDebugger'
+    }
+    baseName = project.name + '-debugger'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}

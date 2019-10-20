@@ -2,6 +2,7 @@ package com.y62wang.chess;
 
 import com.y62wang.chess.bits.Endianess;
 
+import java.util.Collection;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.Bitboard.BOARD_WIDTH;
@@ -29,5 +30,23 @@ public class Util
     public static void printBitboard(long board)
     {
         System.out.println(bitboardString(board));
+    }
+
+    public static void printMoves(Collection<Short> moves)
+    {
+        for (final Short move : moves)
+        {
+            System.out.print(Move.moveString(move) + " ");
+        }
+        System.out.println();
+    }
+
+    public static void printMoves2(Collection<Short> moves)
+    {
+        for (final Short move : moves)
+        {
+            System.out.print(Move.moveString(move) + "(" + move + ") ");
+        }
+        System.out.println();
     }
 }

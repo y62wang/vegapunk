@@ -9,7 +9,7 @@ import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 public class Square
 {
     private static final String[] RANK_STRINGS = new String[] {"1", "2", "3", "4", "5", "6", "7", "8"};
-    private static final String[] FILE_STRINGS = new String[] {"A", "B", "C", "D", "E", "F", "G", "H"};
+    private static final String[] FILE_STRINGS = new String[] {"a", "b", "c", "d", "e", "f", "g", "h"};
     private static final Map<Integer, String> SQUARE_STRINGS = new HashMap<>();
 
     static
