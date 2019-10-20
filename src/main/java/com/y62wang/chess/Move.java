@@ -66,7 +66,15 @@ public class Move
 
     public static boolean isCastle(short move)
     {
-        return moveCode(move) == KING_CASTLE || moveCode(move) == QUEEN_CASTLE;
+        return  isKingCastle(move) || isQueenCastle(move);
+    }
+
+    public static boolean isKingCastle(short move) {
+        return moveCode(move) == KING_CASTLE;
+    }
+
+    public static boolean isQueenCastle(short move) {
+        return moveCode(move) == QUEEN_CASTLE;
     }
 
     public static boolean isEnpassant(short move)
@@ -113,14 +121,14 @@ public class Move
 
     public static String moveString(short move)
     {
-        if (moveCode(move) == KING_CASTLE)
-        {
-            return "O-O";
-        }
-        else if (moveCode(move) == QUEEN_CASTLE)
-        {
-            return "O-O-O";
-        }
+//        if (moveCode(move) == KING_CASTLE)
+//        {
+//            return "O-O";
+//        }
+//        else if (moveCode(move) == QUEEN_CASTLE)
+//        {
+//            return "O-O-O";
+//        }
         return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
 
@@ -128,8 +136,6 @@ public class Move
     {
         int fileIndex = fileToIndex(location.charAt(0));
         int rankIndex = rankToIndex(location.charAt(1));
-        System.out.println(fileIndex);
-        System.out.println(rankIndex);
         return BoardUtil.square(fileIndex,rankIndex);
     }
 

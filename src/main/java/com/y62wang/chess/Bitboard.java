@@ -23,8 +23,10 @@ import static com.y62wang.chess.BoardConstants.BB_RANK_4;
 import static com.y62wang.chess.BoardConstants.BB_RANK_5;
 import static com.y62wang.chess.BoardConstants.BB_RANK_8;
 import static com.y62wang.chess.BoardConstants.BOARD_DIM;
-import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_MASK;
-import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_MASK;
+import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_CLEAR_MASK;
+import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_ATTACK_MASK;
+import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_ATTACK_MASK;
+import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
 import static com.y62wang.chess.BoardConstants.RANK_3;
 import static com.y62wang.chess.BoardConstants.RANK_4;
@@ -40,8 +42,10 @@ import static com.y62wang.chess.BoardConstants.SQ_G1;
 import static com.y62wang.chess.BoardConstants.SQ_G8;
 import static com.y62wang.chess.BoardConstants.SQ_H1;
 import static com.y62wang.chess.BoardConstants.SQ_H8;
-import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_MASK;
-import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_MASK;
+import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_CLEAR_MASK;
+import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_ATTACK_MASK;
+import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_ATTACK_MASK;
+import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardUtil.*;
 
 public class Bitboard
@@ -60,10 +64,10 @@ public class Bitboard
     private static final int WQ_CASTLE_SHIFT = 1;
     private static final int BK_CASTLE_SHIFT = 2;
     private static final int BQ_CASTLE_SHIFT = 3;
-    private static final short WK_CASTLE_MASK = (1 << 1) - 1;
-    private static final short WQ_CASTLE_MASK = (1 << 2) - 1;
-    private static final short BK_CASTLE_MASK = (1 << 3) - 1;
-    private static final short BQ_CASTLE_MASK = (1 << 4) - 1;
+    private static final short WK_CASTLE_MASK = 1;
+    private static final short WQ_CASTLE_MASK = 2;
+    private static final short BK_CASTLE_MASK = 4;
+    private static final short BQ_CASTLE_MASK = 8;
     private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
     public static final int NO_EP_TARGET = -1;
     private short castleRights;
@@ -403,6 +407,18 @@ public class Bitboard
             }
             movePiece(from, to, board[myColor]);
         }
+        else if (Move.isKingCastle(move))
+        {
+            int toSquare = Move.toSquare(move);
+            movePiece(from, to, board[myColor]);
+            movePiece(squareBB(toSquare + 1), squareBB(toSquare - 1), board[myColor]);
+        }
+        else if (Move.isQueenCastle(move))
+        {
+            int toSquare = Move.toSquare(move);
+            movePiece(from, to, board[myColor]);
+            movePiece(squareBB(toSquare - 2), squareBB(toSquare + 1), board[myColor]);
+        }
         else
         {
             if (Move.isCapture(move))
@@ -436,12 +452,12 @@ public class Bitboard
         }
         else if (intersects(BR & BB_A8, from))
         {
-            updatedCastleRights = unsetCastleBit(updatedCastleRights, WQ_CASTLE_MASK);
+            updatedCastleRights = unsetCastleBit(updatedCastleRights, BQ_CASTLE_MASK);
         }
 
-        else if (intersects(WR & BB_H8, from))
+        else if (intersects(BR & BB_H8, from))
         {
-            updatedCastleRights = unsetCastleBit(updatedCastleRights, WK_CASTLE_MASK);
+            updatedCastleRights = unsetCastleBit(updatedCastleRights, BK_CASTLE_MASK);
         }
 
         int newEnPassantTarget = NO_EP_TARGET;
@@ -543,12 +559,12 @@ public class Bitboard
             return singleAttackerMoves;
         }
 
-        if (intersects(opponentTargets, W_KING_CASTLE_MASK))
+        if (intersects(opponentTargets, W_KING_CASTLE_ATTACK_MASK))
         {
             moves.remove(Move.WHITE_KING_CASTLE_MOVE);
         }
 
-        if (intersects(opponentTargets, W_QUEEN_CASTLE_MASK))
+        if (intersects(opponentTargets, W_QUEEN_CASTLE_ATTACK_MASK))
         {
             moves.remove(Move.WHITE_QUEEN_CASTLE_MOVE);
         }
@@ -591,14 +607,6 @@ public class Bitboard
         moves.removeAll(pinRestrictedMoves);
         moves.removeIf(m -> intersects(myKing, Move.fromSquareBB(m)) && intersects(Move.toSquareBB(m), opponentTargets));
 
-        for (final Short move : moves)
-        {
-            if ((Move.fromSquareBB(move) & occupied) == 0)
-            {
-                System.out.println("Move " + Move.moveString(move) + " " + (Move.fromSquareBB(move) & occupied));
-                System.out.println("CODE" + Move.moveCode(move));
-            }
-        }
         if (numAttackers == 1)
         {
             int attacker = BitScan.ls1b(attackersToKing);
@@ -619,12 +627,12 @@ public class Bitboard
             return singleAttackerMoves;
         }
 
-        if (intersects(opponentTargets, B_KING_CASTLE_MASK))
+        if (intersects(opponentTargets, B_KING_CASTLE_ATTACK_MASK))
         {
             moves.remove(Move.BLACK_KING_CASTLE_MOVE);
         }
 
-        if (intersects(opponentTargets, B_QUEEN_CASTLE_MASK))
+        if (intersects(opponentTargets, B_QUEEN_CASTLE_ATTACK_MASK))
         {
             moves.remove(Move.BLACK_QUEEN_CASTLE_MOVE);
         }
@@ -856,7 +864,7 @@ public class Bitboard
     private Set<Short> pseudoWhiteCastles()
     {
         Set<Short> moves = new HashSet<>();
-        if (((W_KING_CASTLE_MASK) & occupied()) == 0
+        if (((W_KING_CASTLE_CLEAR_MASK) & occupied()) == 0
             && (WK & squareBB(SQ_E1)) != 0
             && (WR & squareBB(SQ_H1)) != 0
             && canCastle(WK_CASTLE_MASK))
@@ -864,7 +872,7 @@ public class Bitboard
             moves.add(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
         }
 
-        if ((W_QUEEN_CASTLE_MASK & occupied()) == 0
+        if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied()) == 0
             && (WK & squareBB(SQ_E1)) != 0
             && (WR & squareBB(SQ_A1)) != 0
             && canCastle(WQ_CASTLE_MASK))
@@ -877,7 +885,7 @@ public class Bitboard
     private Set<Short> pseudoBlackCastles()
     {
         Set<Short> moves = new HashSet<>();
-        if (((B_KING_CASTLE_MASK) & occupied()) == 0
+        if (((B_KING_CASTLE_CLEAR_MASK) & occupied()) == 0
             && (BK & squareBB(SQ_E8)) != 0
             && (BR & squareBB(SQ_H8)) != 0
             && this.canCastle(BK_CASTLE_MASK))
@@ -885,7 +893,7 @@ public class Bitboard
             moves.add(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
         }
 
-        if ((B_QUEEN_CASTLE_MASK & occupied()) == 0
+        if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied()) == 0
             && (BK & squareBB(SQ_E8)) != 0
             && (BR & squareBB(SQ_A8)) != 0
             && this.canCastle(BQ_CASTLE_MASK))
@@ -1168,13 +1176,14 @@ public class Bitboard
 
     public void debug()
     {
-//        Set<Short> shorts = blackLegalMoves();
-//        shorts.forEach(s -> System.out.println(Move.moveString(s) + " " + s));
-//        Bitboard bitboard = makeMove(( short ) 7252);
-//        System.out.println(bitboard.toString());
-//        shorts = blackLegalMoves();
-//        shorts.forEach(s -> System.out.println(Move.moveString(s) + " " + s));
-        Bitboard bitboard = this.makeMove(( short ) -28236);
-        System.out.println(bitboard);
+  //      castleRights = FULL_CASTLE_RIGHT;
+        // castleRights = unsetCastleBit(castleRights,WK_CASTLE_MASK);
+//        castleRights = unsetCastleBit(castleRights,WQ_CASTLE_MASK);
+//        castleRights = unsetCastleBit(castleRights,BK_CASTLE_MASK);
+//        castleRights = unsetCastleBit(castleRights,BQ_CASTLE_MASK);
+        System.out.println("WK CASTLE " + canCastle(WK_CASTLE_MASK));
+        System.out.println("WQ CASTLE " + canCastle(WQ_CASTLE_MASK));
+        System.out.println("BK CASTLE " + canCastle(BK_CASTLE_MASK));
+        System.out.println("BQ CASTLE " + canCastle(BQ_CASTLE_MASK));
     }
 }

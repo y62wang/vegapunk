@@ -128,15 +128,20 @@ public class BoardConstants
     public static final int SQ_H7 = SQ_G7 + 1;
     public static final int SQ_H8 = SQ_G8 + 1;
 
-    public static final int BB_A1 = BoardUtil.square(0,0);
-    public static final int BB_A8 = BoardUtil.square(0,7);
-    public static final int BB_H1 = BoardUtil.square(7,0);
-    public static final int BB_H8 = BoardUtil.square(7,7);
+    public static final long BB_A1 = BoardUtil.squareBB(SQ_A1);
+    public static final long BB_A8 = BoardUtil.squareBB(SQ_A8);
+    public static final long BB_H1 = BoardUtil.squareBB(SQ_H1);
+    public static final long BB_H8 = BoardUtil.squareBB(SQ_H8);
 
     public static final long OUTER_BOARD = BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8;
     public static final long INNER_BOARD = ~(BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8);
-    public static final long W_KING_CASTLE_MASK = position(SQ_F1, SQ_G1);
-    public static final long W_QUEEN_CASTLE_MASK = position(SQ_B1, SQ_C1, SQ_D1);
-    public static final long B_KING_CASTLE_MASK = position(SQ_F8, SQ_G8);
-    public static final long B_QUEEN_CASTLE_MASK = position(SQ_B8, SQ_C8, SQ_D8);
+    public static final long W_KING_CASTLE_ATTACK_MASK = position(SQ_F1, SQ_G1);
+    public static final long W_KING_CASTLE_CLEAR_MASK = position(SQ_F1, SQ_G1);
+    public static final long W_QUEEN_CASTLE_ATTACK_MASK = position(SQ_C1, SQ_D1);
+    public static final long W_QUEEN_CASTLE_CLEAR_MASK = position(SQ_B1, SQ_C1, SQ_D1);
+
+    public static final long B_KING_CASTLE_ATTACK_MASK = position(SQ_F8, SQ_G8);
+    public static final long B_KING_CASTLE_CLEAR_MASK = position(SQ_F8, SQ_G8);
+    public static final long B_QUEEN_CASTLE_ATTACK_MASK = position(SQ_C8, SQ_D8);
+    public static final long B_QUEEN_CASTLE_CLEAR_MASK = position(SQ_B8, SQ_C8, SQ_D8);
 }

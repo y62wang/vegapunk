@@ -10,15 +10,6 @@ public class PerftDebugger
     {
         Bitboard board = new Bitboard(args[0]);
         int depth = Integer.parseInt(args[1]);
-        Perft.singlePerft(board, depth, 0);
-    }
-
-    private static Bitboard makeMoves(Bitboard board, String... moves)
-    {
-        for (final String move : moves)
-        {
-            board = board.makeMove(Move.of(move));
-        }
-        return board;
+        Perft.singlePerftNonTest(board, depth, 0);
     }
 }
