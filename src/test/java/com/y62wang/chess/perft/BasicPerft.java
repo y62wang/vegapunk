@@ -39,14 +39,14 @@ public class BasicPerft
                 ' ', ' ', ' ', ' ', 'P', ' ', 'P', ' ',
                 ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
         };
-        Bitboard startingBoard = new Bitboard(boardArray);
+        Bitboard startingBoard = new Bitboard("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ");
         perft(startingBoard, tests);
     }
 
     @Test
     public void testPerftPosition4()
     {
-        long[] tests = new long[] {6, 264, 9467, 422333, 15833292, 706045033, 0};
+        long[] tests = new long[] {6, 264, 9467, 422333, 15833292}; // 706045033
         char[] boardArray = new char[] {
                 'r', ' ', ' ', ' ', 'k', ' ', ' ', 'r',
                 'P', 'p', 'p', 'p', ' ', 'p', 'p', 'p',
@@ -57,7 +57,7 @@ public class BasicPerft
                 'P', 'p', ' ', 'P', ' ', ' ', 'P', 'P',
                 'R', ' ', ' ', 'Q', ' ', 'R', 'K', ' ',
         };
-        Bitboard startingBoard = new Bitboard(boardArray);
+        Bitboard startingBoard = new Bitboard("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
         perft(startingBoard, tests);
     }
 
@@ -76,7 +76,7 @@ public class BasicPerft
                 'R', 'N', 'B', 'Q', 'K', ' ', ' ', 'R',
 
         };
-        Bitboard startingBoard = new Bitboard(boardArray);
+        Bitboard startingBoard = new Bitboard("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
         perft(startingBoard, tests);
     }
 
@@ -95,7 +95,7 @@ public class BasicPerft
                 'R', ' ', ' ', ' ', ' ', 'R', 'K', ' ',
 
         };
-        Bitboard startingBoard = new Bitboard(boardArray);
+        Bitboard startingBoard = new Bitboard("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ");
         perft(startingBoard, tests);
     }
 

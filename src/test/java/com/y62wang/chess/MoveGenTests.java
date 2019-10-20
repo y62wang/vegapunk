@@ -41,16 +41,16 @@ public class MoveGenTests
     @Test
     public void testTT()
     {
-        Bitboard board = new Bitboard("r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq -");
-
-        short move = Move.move(SQ_C3, SQ_B1, Move.QUIET_MOVE);
-        System.out.println(move);
-        board = board.makeMove(move);
-        board.debug();
-        board = board.makeMove(Move.move(SQ_E6, SQ_D5, Move.QUIET_MOVE));
-        board.debug();
-        Util.printMoves2(board.legalMoves());
-        // Perft.singlePerft(board, 1, 53);
+        Bitboard board = new Bitboard("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ");
+        // d2h6
+//        short move = Move.move(SQ_C3, SQ_B1, Move.QUIET_MOVE);
+//        System.out.println(move);
+//        board = board.makeMove(move);
+//        board.debug();
+//        board = board.makeMove(Move.move(SQ_E6, SQ_D5, Move.QUIET_MOVE));
+//        board.debug();
+//        Util.printMoves2(board.legalMoves());
+        Perft.singlePerft(board, 1, 53);
         // Perft.singlePerft(board, 2, 1907);
     }
 }

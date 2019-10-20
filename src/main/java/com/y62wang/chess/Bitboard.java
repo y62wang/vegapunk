@@ -915,8 +915,7 @@ public class Bitboard
         long attacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
         long attacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
 
-        long promotionsNE = whitePawnsEastAttackTargets(whitePawns) & BB_RANK_8;
-        long promotionsNW = whitePawnsWestAttackTargets(whitePawns) & BB_RANK_8;
+        long promotionsPush = whitePawnSinglePushTargets(whitePawns, empty) & BB_RANK_8;
         long promotionAttacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
         long promotionAttacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
 
@@ -925,8 +924,7 @@ public class Bitboard
         addPawnMoves(attacksNE, Direction.NORTH_EAST, Move.CAPTURES, moves);
         addPawnMoves(attacksNW, Direction.NORTH_WEST, Move.CAPTURES, moves);
 
-        addPawnPromotions(promotionsNE, Direction.NORTH_EAST, false, moves);
-        addPawnPromotions(promotionsNW, Direction.NORTH_WEST, false, moves);
+        addPawnPromotions(promotionsPush, Direction.NORTH, false, moves);
         addPawnPromotions(promotionAttacksNE, Direction.NORTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, moves);
 
@@ -946,8 +944,7 @@ public class Bitboard
         long attacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
         long attacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
 
-        long promotionsSE = blackPawnsEastAttackTargets(blackPawns) & BB_RANK_1;
-        long promotionsSW = blackPawnsWestAttackTargets(blackPawns) & BB_RANK_1;
+        long promotionsPush = blackPawnSinglePushTargets(blackPawns, empty) & BB_RANK_1;
         long promotionAttacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
         long promotionAttacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
 
@@ -956,8 +953,7 @@ public class Bitboard
         addPawnMoves(attacksSE, Direction.SOUTH_EAST, Move.CAPTURES, moves);
         addPawnMoves(attacksSW, Direction.SOUTH_WEST, Move.CAPTURES, moves);
 
-        addPawnPromotions(promotionsSE, Direction.SOUTH_EAST, false, moves);
-        addPawnPromotions(promotionsSW, Direction.SOUTH_WEST, false, moves);
+        addPawnPromotions(promotionsPush, Direction.SOUTH, false, moves);
         addPawnPromotions(promotionAttacksSE, Direction.SOUTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksSW, Direction.SOUTH_WEST, true, moves);
 
