@@ -123,4 +123,50 @@ public class Move
         }
         return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
+
+    public static int boardIndex(String location)
+    {
+        int fileIndex = fileToIndex(location.charAt(0));
+        int rankIndex = rankToIndex(location.charAt(1));
+        System.out.println(fileIndex);
+        System.out.println(rankIndex);
+        return BoardUtil.square(fileIndex,rankIndex);
+    }
+
+    public static int fileToIndex(char fileChar)
+    {
+        if (Character.isUpperCase(fileChar))
+        {
+            fileChar = Character.toLowerCase(fileChar);
+        }
+        return (fileChar - 'a');
+    }
+
+    private static int rankToIndex(char rankChar)
+    {
+        return rankChar - '1';
+    }
+
+    public static short of(String str)
+    {
+        if (str == null || str.length() > 5 || str.length() < 4)
+        {
+            throw new IllegalArgumentException("Illegal input for a move " + str);
+        }
+        if (str.length() == 5)
+        {
+            char promotionType = str.charAt(4);
+
+        }
+        return Move.move(boardIndex(str.substring(0, 2)), boardIndex(str.substring(2, 4)), 0);
+    }
+
+    public static short of(String from, String to)
+    {
+        if (from == null || to == null || from.length() != 2 || to.length() != 2)
+        {
+            throw new IllegalArgumentException("Illegal input for a move - from: " + from + " to: " + to);
+        }
+        return Move.of(from + to);
+    }
 }

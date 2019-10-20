@@ -394,7 +394,9 @@ public class Bitboard
                 board[colorIndex][KNIGHT_INDEX] |= to;
             }
         }
+
         short updatedCastleRights = castleRights;
+
         if (intersects(WK, from))
         {
             updatedCastleRights = unsetCastleBit(updatedCastleRights, WK_CASTLE_MASK);
@@ -463,6 +465,11 @@ public class Bitboard
                 }
             }
         }
+    }
+
+    public Set<Short> legalMoves()
+    {
+        return isWhiteTurn() ? whiteLegalMoves() : blackLegalMoves();
     }
 
     public Set<Short> whiteLegalMoves()
