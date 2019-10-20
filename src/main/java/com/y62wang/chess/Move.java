@@ -25,6 +25,11 @@ public class Move
     public static final short ROOK_PROMO_CAPTURE = 14;
     public static final short QUEEN_PROMO_CAPTURE = 15;
 
+    public static final short WHITE_KING_CASTLE_MOVE = move(4, 6, KING_CASTLE);
+    public static final short WHITE_QUEEN_CASTLE_MOVE = move(4, 2, QUEEN_CASTLE);
+    public static final short BLACK_KING_CASTLE_MOVE = move(60, 62, KING_CASTLE);
+    public static final short BLACK_QUEEN_CASTLE_MOVE = move(60, 58, QUEEN_CASTLE);
+
     public static short move(int from, int to, int code)
     {
         assert from >= 0 && from < BOARD_SIZE;
@@ -91,6 +96,16 @@ public class Move
         return (move >>> 4) & SQUARE_MASK;
     }
 
+    public static long toSquareBB(short move)
+    {
+        return BoardUtil.squareBB(toSquare(move));
+    }
+
+    public static long fromSquareBB(short move)
+    {
+        return BoardUtil.squareBB(fromSquare(move));
+    }
+
     public static int moveCode(short move)
     {
         return move & MOVE_TYPE_MASK;
@@ -98,7 +113,8 @@ public class Move
 
     public static String moveString(short move)
     {
-        if(moveCode(move) == KING_CASTLE) {
+        if (moveCode(move) == KING_CASTLE)
+        {
             return "O-O";
         }
         else if (moveCode(move) == QUEEN_CASTLE)

@@ -2,12 +2,14 @@ package com.y62wang.chess;
 
 import com.y62wang.chess.bits.BitScan;
 import com.y62wang.chess.bits.Endianess;
+import com.y62wang.chess.bits.PopulationCount;
 import com.y62wang.chess.magic.MagicCache;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_FILE_A;
@@ -17,26 +19,24 @@ import static com.y62wang.chess.BoardConstants.BB_RANK_4;
 import static com.y62wang.chess.BoardConstants.BB_RANK_5;
 import static com.y62wang.chess.BoardConstants.BB_RANK_8;
 import static com.y62wang.chess.BoardConstants.BOARD_DIM;
+import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_MASK;
+import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_MASK;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
 import static com.y62wang.chess.BoardConstants.RANK_4;
 import static com.y62wang.chess.BoardConstants.RANK_5;
-import static com.y62wang.chess.BoardConstants.RANK_8;
 import static com.y62wang.chess.BoardConstants.SQ_A1;
 import static com.y62wang.chess.BoardConstants.SQ_A8;
-import static com.y62wang.chess.BoardConstants.SQ_B1;
-import static com.y62wang.chess.BoardConstants.SQ_B8;
 import static com.y62wang.chess.BoardConstants.SQ_C1;
 import static com.y62wang.chess.BoardConstants.SQ_C8;
-import static com.y62wang.chess.BoardConstants.SQ_D1;
-import static com.y62wang.chess.BoardConstants.SQ_D8;
 import static com.y62wang.chess.BoardConstants.SQ_E1;
 import static com.y62wang.chess.BoardConstants.SQ_E8;
-import static com.y62wang.chess.BoardConstants.SQ_F1;
-import static com.y62wang.chess.BoardConstants.SQ_F8;
 import static com.y62wang.chess.BoardConstants.SQ_G1;
 import static com.y62wang.chess.BoardConstants.SQ_G8;
 import static com.y62wang.chess.BoardConstants.SQ_H1;
 import static com.y62wang.chess.BoardConstants.SQ_H8;
+import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_MASK;
+import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_MASK;
+import static com.y62wang.chess.BoardUtil.*;
 
 public class Bitboard
 {
@@ -283,7 +283,7 @@ public class Bitboard
         return BP | BN | BB | BR | BK | BQ;
     }
 
-    public long targets()
+    private long whiteTargets()
     {
         long occupied = occupied();
         long targets = kingTargets(WK)
@@ -293,8 +293,218 @@ public class Bitboard
                        | bishopTargets(WB, occupied)
                        | whitePawnsEastAttackTargets(WP)
                        | whitePawnsWestAttackTargets(WP);
-        Util.printBitboard(targets);
         return targets;
+    }
+
+    private long blackTargets()
+    {
+        long occupied = occupied();
+        long targets = kingTargets(BK)
+                       | queenTargets(BQ, occupied)
+                       | knightTargets(BN)
+                       | rookTargets(BR, occupied)
+                       | bishopTargets(BB, occupied)
+                       | whitePawnsEastAttackTargets(BP)
+                       | whitePawnsWestAttackTargets(BP);
+        return targets;
+    }
+
+    private Set<Short> whiteLegalMoves()
+    {
+        long ownPieces = whitePieces();
+        long opponentPieces = blackPieces();
+        long occupied = occupied();
+        long myKing = WK;
+        long attackersToKing = opponentPieces & attackersTo(myKing, occupied);
+        long opponentTargets = blackTargets();
+        int numAttackers = PopulationCount.popCount(attackersToKing);
+
+        Set<Short> kingMoves = pseudoKingMoves(myKing, opponentPieces, occupied)
+                .stream()
+                .filter(move -> intersects(squareBB(Move.toSquare(move)), opponentTargets))
+                .collect(Collectors.toSet());
+
+        Set<Short> castleMoves = pseudoWhiteCastles();
+
+        if (numAttackers == 2)
+        {
+            kingMoves.removeAll(castleMoves);
+            return kingMoves;
+        }
+
+        Set<Short> moves = pseudoWhiteMoves();
+
+        // handle pins
+        long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, BQ | BB);
+        long rqPinners = rookQueenPinners(myKing, ownPieces, occupied, BQ | BR);
+        Set<Short> pinRestrictedMoves = getPinRestrictedMoves(myKing, bqPinners | rqPinners, moves);
+        moves.removeAll(pinRestrictedMoves);
+        moves.removeIf(m -> intersects(myKing, Move.fromSquareBB(m)) && intersects(Move.toSquareBB(m), opponentTargets));
+
+        if (numAttackers == 1)
+        {
+            int attacker = BitScan.ls1b(attackersToKing);
+            long attackerBB = attackersToKing;
+            long betweenKingAndAttacker = InBetweenCache.getInstance().inBetweenSet(attacker, BitScan.ls1b(myKing));
+
+            // remove attacker
+            // block attacker (sliders only)
+            // move the king
+
+            Set<Short> singleAttackerMoves = moves.stream()
+                    .filter(m -> (intersects(myKing, Move.fromSquareBB(m)) && isMovingToSafeSquare(m, opponentTargets))
+                                 || (Move.isCapture(m) && intersects(attackerBB, Move.toSquareBB(m)))
+                                 || ((intersects(attackerBB, blackSliders()) && intersects((Move.toSquareBB(m)), betweenKingAndAttacker)))
+                           )
+                    .collect(Collectors.toSet());
+            singleAttackerMoves.removeAll(pseudoWhiteCastles());
+            return singleAttackerMoves;
+        }
+
+        if (intersects(opponentTargets, W_KING_CASTLE_MASK))
+        {
+            moves.remove(Move.WHITE_KING_CASTLE_MOVE);
+        }
+
+        if (intersects(opponentTargets, W_QUEEN_CASTLE_MASK))
+        {
+            moves.remove(Move.WHITE_QUEEN_CASTLE_MOVE);
+        }
+
+        return moves;
+    }
+
+    private Set<Short> blackLegalMoves()
+    {
+        long ownPieces = blackPieces();
+        long opponentPieces = whitePieces();
+        long occupied = occupied();
+        long myKing = BK;
+        long attackersToKing = opponentPieces & attackersTo(myKing, occupied);
+        long opponentTargets = blackTargets();
+        int numAttackers = PopulationCount.popCount(attackersToKing);
+
+        Set<Short> kingMoves = pseudoKingMoves(myKing, opponentPieces, occupied)
+                .stream()
+                .filter(move -> intersects(squareBB(Move.toSquare(move)), opponentTargets))
+                .collect(Collectors.toSet());
+
+        Set<Short> castleMoves = pseudoBlackCastles();
+
+        if (numAttackers == 2)
+        {
+            kingMoves.removeAll(castleMoves);
+            return kingMoves;
+        }
+
+        Set<Short> moves = pseudoBlackMoves();
+
+        // handle pins
+        long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, WQ | WB);
+        long rqPinners = rookQueenPinners(myKing, ownPieces, occupied, WQ | WR);
+        Set<Short> pinRestrictedMoves = getPinRestrictedMoves(myKing, bqPinners | rqPinners, moves);
+        moves.removeAll(pinRestrictedMoves);
+        moves.removeIf(m -> intersects(myKing, Move.fromSquareBB(m)) && intersects(Move.toSquareBB(m), opponentTargets));
+
+        if (numAttackers == 1)
+        {
+            int attacker = BitScan.ls1b(attackersToKing);
+            long attackerBB = attackersToKing;
+            long betweenKingAndAttacker = InBetweenCache.getInstance().inBetweenSet(attacker, BitScan.ls1b(myKing));
+
+            // remove attacker
+            // block attacker (sliders only)
+            // move the king
+
+            Set<Short> singleAttackerMoves = moves.stream()
+                    .filter(m -> (intersects(myKing, Move.fromSquareBB(m)) && isMovingToSafeSquare(m, opponentTargets))
+                                 || (Move.isCapture(m) && intersects(attackerBB, Move.toSquareBB(m)))
+                                 || ((intersects(attackerBB, whiteSliders()) && intersects((Move.toSquareBB(m)), betweenKingAndAttacker)))
+                           )
+                    .collect(Collectors.toSet());
+            singleAttackerMoves.removeAll(pseudoWhiteCastles());
+            return singleAttackerMoves;
+        }
+
+        if (intersects(opponentTargets, B_KING_CASTLE_MASK))
+        {
+            moves.remove(Move.BLACK_KING_CASTLE_MOVE);
+        }
+
+        if (intersects(opponentTargets, B_QUEEN_CASTLE_MASK))
+        {
+            moves.remove(Move.BLACK_QUEEN_CASTLE_MOVE);
+        }
+
+        return moves;
+    }
+
+    private long whiteSliders()
+    {
+        return WB | WQ | WR;
+    }
+
+    private long blackSliders()
+    {
+        return BB | BQ | BR;
+    }
+
+    private boolean isMovingToSafeSquare(final Short move, final long attackTargets)
+    {
+        return intersects(squareBB(Move.fromSquare(move)), WK) && !intersects(squareBB(Move.toSquare(move)), attackTargets);
+    }
+
+    private Set<Short> getPinRestrictedMoves(long king, long pinners, Set<Short> pseudoMoves)
+    {
+        Set<Short> restrictedMoves = new HashSet<>();
+        while (pinners != 0)
+        {
+            int pinner = BitScan.ls1b(pinners);
+            long pinnerBB = shift(1L, pinner);
+            long inBetweenSquares = InBetweenCache.getInstance().inBetweenSet(pinner, BitScan.ls1b(king));
+            pseudoMoves.stream()
+                    .filter(m -> intersects(squareBB(Move.fromSquare(m)), inBetweenSquares))
+                    .filter(m -> !intersects(squareBB(Move.toSquare(m)), pinnerBB | inBetweenSquares))
+                    .forEach(restrictedMoves::add);
+            pinners &= ~pinnerBB;
+        }
+        return restrictedMoves;
+    }
+
+    private long rookQueenPinners(long king, long ownPieces, long occupied, long opponentRQ)
+    {
+        return opponentRQ & xrayRookAttacks(BitScan.ls1b(king), ownPieces, occupied);
+    }
+
+    private long bishopQueenPinners(long king, long ownPieces, long occupied, long opponentBQ)
+    {
+        return opponentBQ & xrayBishopAttacks(BitScan.ls1b(king), ownPieces, occupied);
+    }
+
+    private long xrayRookAttacks(int square, long blockers, long occupancy)
+    {
+        long squareBB = squareBB(square);
+        long targets = rookTargets(squareBB, occupancy);
+        blockers &= targets;
+        return targets ^ rookTargets(squareBB, occupancy ^ blockers);
+    }
+
+    private long xrayBishopAttacks(int square, long blockers, long occupancy)
+    {
+        long squareBB = squareBB(square);
+        long targets = bishopTargets(squareBB, occupancy);
+        blockers &= targets;
+        return targets ^ bishopTargets(squareBB, occupancy ^ blockers);
+    }
+
+    private long attackersTo(long squareBB, long occupied)
+    {
+        return (kingTargets(squareBB) & (BK | WK))
+               | (knightTargets(squareBB) & (BN | WN))
+               | (bishopTargets(squareBB, occupied) & (BQ | WQ | BB | WB))
+               | (rookTargets(squareBB, occupied) & (BQ | WQ | BR | WR))
+               | ((whitePawnsEastAttackTargets(squareBB) | whitePawnsWestAttackTargets(squareBB)) & (BP))
+               | ((blackPawnsEastAttackTargets(squareBB) | blackPawnsWestAttackTargets(squareBB)) & (WP));
     }
 
     private long knightTargets(long knights)
@@ -393,9 +603,20 @@ public class Bitboard
         return SW1(blackPawns);
     }
 
-    private List<Short> pseudoMovesWhite()
+    private Set<Short> legalWhiteMoves()
     {
-        List<Short> moves = new ArrayList<>();
+        Set<Short> moves = new HashSet<>();
+        long opponentPieces = blackPieces();
+        long occupied = occupied();
+
+        Set<Short> pseudoMoves = pseudoWhiteMoves();
+
+        return pseudoMoves;
+    }
+
+    private Set<Short> pseudoWhiteMoves()
+    {
+        Set<Short> moves = new HashSet<>();
         long opponentPieces = blackPieces();
         long occupied = occupied();
 
@@ -409,34 +630,92 @@ public class Bitboard
         return moves;
     }
 
-    private List<Short> pseudoKingMoves(long king, long opponentPieces, long occupied)
+    private Set<Short> pseudoBlackMoves()
+    {
+        Set<Short> moves = new HashSet<>();
+        long opponentPieces = whitePieces();
+        long occupied = occupied();
+
+        moves.addAll(pseudoBishopMoves(BB, opponentPieces, occupied));
+        moves.addAll(pseudoRookMoves(BR, opponentPieces, occupied));
+        moves.addAll(pseudoQueenMoves(BQ, opponentPieces, occupied));
+        moves.addAll(pseudoKingMoves(BK, opponentPieces, occupied));
+        moves.addAll(pseudoKnightMoves(BN, opponentPieces, occupied));
+        moves.addAll(pseudoBlackPawnMoves(BP, opponentPieces, occupied));
+        moves.addAll(pseudoBlackCastles());
+        return moves;
+    }
+
+    private Set<Short> pseudoKingMoves(long king, long opponentPieces, long occupied)
     {
         return pseudoNonSlidingMoves(king, opponentPieces, occupied, King::kingTargets);
     }
 
-    private List<Short> pseudoKnightMoves(long knights, long opponentPieces, long occupied)
+    private Set<Short> pseudoKnightMoves(long knights, long opponentPieces, long occupied)
     {
         return pseudoNonSlidingMoves(knights, opponentPieces, occupied, Knight::knightTargets);
     }
 
-    private List<Short> pseudoRookMoves(long rooks, long opponentPieces, long occupied)
+    private Set<Short> pseudoRookMoves(long rooks, long opponentPieces, long occupied)
     {
         return pseudoSlidingMoves(rooks, opponentPieces, occupied, MagicCache.getInstance()::rookAttacks);
     }
 
-    private List<Short> pseudoBishopMoves(long bishops, long opponentPieces, long occupied)
+    private Set<Short> pseudoBishopMoves(long bishops, long opponentPieces, long occupied)
     {
         return pseudoSlidingMoves(bishops, opponentPieces, occupied, MagicCache.getInstance()::bishopAttacks);
     }
 
-    private List<Short> pseudoQueenMoves(long queens, long opponentPieces, long occupied)
+    private Set<Short> pseudoQueenMoves(long queens, long opponentPieces, long occupied)
     {
         return pseudoSlidingMoves(queens, opponentPieces, occupied, MagicCache.getInstance()::queenAttacks);
     }
 
-    private List<Short> pseudoWhitePawnMoves(long whitePawns, long opponentPieces, long occupied)
+    private Set<Short> pseudoWhiteCastles()
     {
-        List<Short> moves = new ArrayList<>();
+        Set<Short> moves = new HashSet<>();
+        if (((W_KING_CASTLE_MASK) & occupied()) == 0
+            && (WK & squareBB(SQ_E1)) != 0
+            && (WR & squareBB(SQ_H1)) != 0
+            && this.WKCastle)
+        {
+            moves.add(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
+        }
+
+        if ((W_QUEEN_CASTLE_MASK & occupied()) == 0
+            && (WK & squareBB(SQ_E1)) != 0
+            && (WR & squareBB(SQ_A1)) != 0
+            && this.WQCastle)
+        {
+            moves.add(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
+        }
+        return moves;
+    }
+
+    private Set<Short> pseudoBlackCastles()
+    {
+        Set<Short> moves = new HashSet<>();
+        if (((B_KING_CASTLE_MASK) & occupied()) == 0
+            && (BK & squareBB(SQ_E8)) != 0
+            && (BR & squareBB(SQ_H8)) != 0
+            && this.BKCastle)
+        {
+            moves.add(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
+        }
+
+        if ((B_QUEEN_CASTLE_MASK & occupied()) == 0
+            && (BK & squareBB(SQ_E8)) != 0
+            && (BR & squareBB(SQ_A8)) != 0
+            && this.BQCastle)
+        {
+            moves.add(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
+        }
+        return moves;
+    }
+
+    private Set<Short> pseudoWhitePawnMoves(long whitePawns, long opponentPieces, long occupied)
+    {
+        Set<Short> moves = new HashSet<>();
 
         long empty = emptySquares();
         long blackPieces = blackPieces();
@@ -465,51 +744,9 @@ public class Bitboard
         return moves;
     }
 
-    private List<Short> pseudoWhiteCastles()
+    private Set<Short> pseudoBlackPawnMoves(long blackPawns, long opponentPieces, long occupied)
     {
-        List<Short> moves = new ArrayList<>();
-        if (((BoardUtil.position(SQ_F1, SQ_G1)) & occupied()) == 0
-            && (WK & BoardUtil.squareBB(SQ_E1)) != 0
-            && (WR & BoardUtil.squareBB(SQ_H1)) != 0
-            && this.WKCastle)
-        {
-            moves.add(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
-        }
-
-        if ((BoardUtil.position(SQ_B1, SQ_C1, SQ_D1) & occupied()) == 0
-            && (WK & BoardUtil.squareBB(SQ_E1)) != 0
-            && (WR & BoardUtil.squareBB(SQ_A1)) != 0
-            && this.WQCastle)
-        {
-            moves.add(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
-        }
-        return moves;
-    }
-
-    private List<Short> pseudoBlackCastles()
-    {
-        List<Short> moves = new ArrayList<>();
-        if (((BoardUtil.position(SQ_F8, SQ_G8)) & occupied()) == 0
-            && (BK & BoardUtil.squareBB(SQ_E8)) != 0
-            && (BR & BoardUtil.squareBB(SQ_H8)) != 0
-            && this.BKCastle)
-        {
-            moves.add(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
-        }
-
-        if ((BoardUtil.position(SQ_B8, SQ_C8, SQ_D8) & occupied()) == 0
-            && (BK & BoardUtil.squareBB(SQ_E8)) != 0
-            && (BR & BoardUtil.squareBB(SQ_A8)) != 0
-            && this.BQCastle)
-        {
-            moves.add(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
-        }
-        return moves;
-    }
-
-    private List<Short> pseudoBlackPawnMoves(long blackPawns, long opponentPieces, long occupied)
-    {
-        List<Short> moves = new ArrayList<>();
+        Set<Short> moves = new HashSet<>();
 
         long empty = emptySquares();
         long whitePieces = whitePieces();
@@ -539,13 +776,13 @@ public class Bitboard
         return moves;
     }
 
-    private void addPawnPromotions(long targetSquares, int shift, boolean isCapture, List<Short> moves)
+    private void addPawnPromotions(long targetSquares, int shift, boolean isCapture, Set<Short> moves)
     {
         while (targetSquares != 0)
         {
             int toSquare = BitScan.ls1b(targetSquares);
             int fromSquare = toSquare - shift;
-            targetSquares &= ~BoardUtil.squareBB(toSquare);
+            targetSquares &= ~squareBB(toSquare);
 
             if (isCapture)
             {
@@ -564,7 +801,7 @@ public class Bitboard
         }
     }
 
-    private void addEnPassantForWhite(List<Short> moves)
+    private void addEnPassantForWhite(Set<Short> moves)
     {
         int enpassantFile = this.enPassantTarget - 1;
         if (enpassantFile < 0)
@@ -572,23 +809,23 @@ public class Bitboard
             return;
         }
 
-        long targetBB = BoardUtil.squareBB(enpassantFile, RANK_5);
-        int target = BoardUtil.square(enpassantFile, RANK_5);
+        long targetBB = squareBB(enpassantFile, RANK_5);
+        int target = square(enpassantFile, RANK_5);
 
         assert !(intersects(targetBB, occupied()));
 
-        if (intersects(NE1(WP), targetBB))
+        if (intersects(targetBB, BP) && intersects(NE1(WP), targetBB))
         {
             moves.add(Move.move(target + Direction.SOUTH_WEST, target, Move.EP_CAPTURE));
         }
 
-        if (intersects(NW1(WP), targetBB))
+        if (intersects(targetBB, BP) && intersects(NW1(WP), targetBB))
         {
             moves.add(Move.move(target + Direction.SOUTH_EAST, target, Move.EP_CAPTURE));
         }
     }
 
-    private void addEnPassantForBlack(List<Short> moves)
+    private void addEnPassantForBlack(Set<Short> moves)
     {
         int enpassantFile = this.enPassantTarget - 1;
         if (enpassantFile < 0)
@@ -596,29 +833,29 @@ public class Bitboard
             return;
         }
 
-        long targetBB = BoardUtil.squareBB(enpassantFile, RANK_4);
-        int target = BoardUtil.square(enpassantFile, RANK_4);
+        long targetBB = squareBB(enpassantFile, RANK_4);
+        int target = square(enpassantFile, RANK_4);
 
         assert !(intersects(targetBB, occupied()));
 
-        if (intersects(SE1(BP), targetBB))
+        if (intersects(targetBB, WP) && intersects(SE1(BP), targetBB))
         {
             moves.add(Move.move(target + Direction.NORTH_WEST, target, Move.EP_CAPTURE));
         }
 
-        if (intersects(SW1(BP), targetBB))
+        if (intersects(targetBB, WP) && intersects(SW1(BP), targetBB))
         {
             moves.add(Move.move(target + Direction.NORTH_EAST, target, Move.EP_CAPTURE));
         }
     }
 
-    private void addPawnMoves(long targetSquares, int shift, short moveType, List<Short> moves)
+    private void addPawnMoves(long targetSquares, int shift, short moveType, Set<Short> moves)
     {
         while (targetSquares != 0)
         {
             int toSquare = BitScan.ls1b(targetSquares);
             int fromSquare = toSquare - shift;
-            targetSquares &= ~BoardUtil.squareBB(toSquare);
+            targetSquares &= ~squareBB(toSquare);
 
             if (Move.isPromotion(moveType))
             {
@@ -644,9 +881,9 @@ public class Bitboard
         }
     }
 
-    private List<Short> pseudoSlidingMoves(long sliders, long opponentPieces, long occupied, BiFunction<Integer, Long, Long> magicFn)
+    private Set<Short> pseudoSlidingMoves(long sliders, long opponentPieces, long occupied, BiFunction<Integer, Long, Long> magicFn)
     {
-        List<Short> moves = new ArrayList<>();
+        Set<Short> moves = new HashSet<>();
         while (sliders != 0)
         {
             int sliderSq = BitScan.ls1b(sliders);
@@ -656,17 +893,17 @@ public class Bitboard
             while (attackSet != 0)
             {
                 int toSquare = BitScan.ls1b(attackSet);
-                attackSet &= ~BoardUtil.squareBB(toSquare);
-                short moveType = intersects(BoardUtil.squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                attackSet &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
                 moves.add(Move.move(sliderSq, toSquare, moveType));
             }
         }
         return moves;
     }
 
-    private List<Short> pseudoNonSlidingMoves(long fromBB, long opponentPieces, long occupied, Function<Integer, Long> fn)
+    private Set<Short> pseudoNonSlidingMoves(long fromBB, long opponentPieces, long occupied, Function<Integer, Long> fn)
     {
-        List<Short> moves = new ArrayList<>();
+        Set<Short> moves = new HashSet<>();
         while (fromBB != 0)
         {
             int fromSq = BitScan.ls1b(fromBB);
@@ -676,8 +913,8 @@ public class Bitboard
             while (attackSet != 0)
             {
                 int toSquare = BitScan.ls1b(attackSet);
-                attackSet &= ~BoardUtil.squareBB(toSquare);
-                short moveType = intersects(BoardUtil.squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                attackSet &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
                 moves.add(Move.move(fromSq, toSquare, moveType));
             }
         }
@@ -736,11 +973,7 @@ public class Bitboard
 
     public void debug()
     {
-//        pseudoKingMoves(BK, whitePieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
-//        pseudoKnightMoves(WN, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
-        pseudoMovesWhite().forEach(s -> System.out.println(Move.moveString(s)));
-        // pseudoWhitePawnMoves(WP, blackPieces(), occupied()).forEach(s -> System.out.println(Move.moveString(s)));
-//        long bp = blackPieces();
-//        pseudoWhiteCastles().forEach(s -> System.out.println(Move.moveString(s)));
+        Set<Short> shorts = whiteLegalMoves();
+        shorts.forEach(s -> System.out.println(Move.moveString(s)));
     }
 }

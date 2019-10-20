@@ -37,7 +37,7 @@ public class MagicCache
         return INSTANCE;
     }
 
-    public MagicCache()
+    private MagicCache()
     {
         rookMagic = prepareMagic(ROOK_MAGIC, ROOK_MAGIC_BITS, Rook::rookMask, Rook::rookAttacks);
         bishopMagic = prepareMagic(BISHOP_MAGIC, BISHOP_MAGIC_BITS, Bishop::bishopMask, Bishop::bishopAttacks);

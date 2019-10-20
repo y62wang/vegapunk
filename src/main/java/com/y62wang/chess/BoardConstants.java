@@ -1,5 +1,7 @@
 package com.y62wang.chess;
 
+import static com.y62wang.chess.BoardUtil.position;
+
 public class BoardConstants
 {
     public static final int BOARD_DIM = 8;
@@ -128,4 +130,8 @@ public class BoardConstants
 
     public static final long OUTER_BOARD = BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8;
     public static final long INNER_BOARD = ~(BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8);
+    public static final long W_KING_CASTLE_MASK = position(SQ_F1, SQ_G1);
+    public static final long W_QUEEN_CASTLE_MASK = position(SQ_B1, SQ_C1, SQ_D1);
+    public static final long B_KING_CASTLE_MASK = position(SQ_F8, SQ_G8);
+    public static final long B_QUEEN_CASTLE_MASK = position(SQ_B8, SQ_C8, SQ_D8);
 }
