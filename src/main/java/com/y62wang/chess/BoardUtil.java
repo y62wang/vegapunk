@@ -9,6 +9,27 @@ import static com.y62wang.chess.BoardConstants.*;
 
 public class BoardUtil
 {
+    private static final long[][] SQUARES_BB;
+    private static final long[] SQUARES_BB_SINGLE;
+
+    static
+    {
+        SQUARES_BB = new long[BOARD_DIM][BOARD_DIM];
+        for (int i = 0; i < BOARD_DIM; i++)
+        {
+            for (int j = 0; j < BOARD_DIM; j++)
+            {
+                SQUARES_BB[i][j] = 1L << square(i, j);
+            }
+        }
+
+        SQUARES_BB_SINGLE = new long[BOARD_SIZE];
+        for (int i = 0; i < BOARD_SIZE; i++)
+        {
+            SQUARES_BB_SINGLE[i] = 1L << i;
+        }
+    }
+
     public static int rank(int square)
     {
         return square / BOARD_DIM;
@@ -31,12 +52,12 @@ public class BoardUtil
 
     public static long squareBB(int file, int rank)
     {
-        return 1L << square(file, rank);
+        return SQUARES_BB[file][rank];
     }
 
     public static long squareBB(int square)
     {
-        return 1L << square;
+        return SQUARES_BB_SINGLE[square];
     }
 
     public static int square(int file, int rank)

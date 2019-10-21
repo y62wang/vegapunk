@@ -7,8 +7,8 @@ import static com.y62wang.chess.BoardConstants.BOARD_SIZE;
 public class Move
 {
 
-    private static final int SQUARE_MASK = ( int ) BitMask.getMask(6);
-    private static final int MOVE_TYPE_MASK = ( int ) BitMask.getMask(4);
+    private static final short SQUARE_MASK = ( short ) BitMask.getMask(6);
+    private static final short MOVE_TYPE_MASK = ( short ) BitMask.getMask(4);
 
     public static final short QUIET_MOVE = 0;
     public static final short DOUBLE_PAWN_PUSH = 1;
@@ -66,14 +66,16 @@ public class Move
 
     public static boolean isCastle(short move)
     {
-        return  isKingCastle(move) || isQueenCastle(move);
+        return isKingCastle(move) || isQueenCastle(move);
     }
 
-    public static boolean isKingCastle(short move) {
+    public static boolean isKingCastle(short move)
+    {
         return moveCode(move) == KING_CASTLE;
     }
 
-    public static boolean isQueenCastle(short move) {
+    public static boolean isQueenCastle(short move)
+    {
         return moveCode(move) == QUEEN_CASTLE;
     }
 
@@ -114,21 +116,13 @@ public class Move
         return BoardUtil.squareBB(fromSquare(move));
     }
 
-    public static int moveCode(short move)
+    public static short moveCode(short move)
     {
-        return move & MOVE_TYPE_MASK;
+        return ( short ) (move & MOVE_TYPE_MASK);
     }
 
     public static String moveString(short move)
     {
-//        if (moveCode(move) == KING_CASTLE)
-//        {
-//            return "O-O";
-//        }
-//        else if (moveCode(move) == QUEEN_CASTLE)
-//        {
-//            return "O-O-O";
-//        }
         return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
 
@@ -136,7 +130,7 @@ public class Move
     {
         int fileIndex = fileToIndex(location.charAt(0));
         int rankIndex = rankToIndex(location.charAt(1));
-        return BoardUtil.square(fileIndex,rankIndex);
+        return BoardUtil.square(fileIndex, rankIndex);
     }
 
     public static int fileToIndex(char fileChar)
