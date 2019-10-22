@@ -16,7 +16,7 @@ public class Perft
     {
         Map<Integer, Long> map = new HashMap<>();
         Map<String, Integer> roots = new HashMap<>();
-        perft(board, depth, 0, map, roots, ( short ) 0);
+        perftTime(board, depth);
         roots.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
     }
 
