@@ -25,11 +25,11 @@ public class Perft
     {
         Map<Integer, Long> map = new HashMap<>();
         Map<String, Integer> roots = new HashMap<>();
-        perft(board, depth, 0, map, roots, ( short ) 0);
+        long result = perftTime(board, depth);
         System.out.println(roots.keySet() + " " + roots.values());
         System.out.println("==============================================================");
         // roots.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
-        Assert.assertEquals(Long.valueOf(expectedNodeCount), map.getOrDefault(depth, 0L));
+        Assert.assertEquals(Long.valueOf(expectedNodeCount), Long.valueOf(result));
     }
 
     public static void perft(Bitboard startingBoard, long[] expectedNodeCountByDepth)
@@ -40,13 +40,14 @@ public class Perft
         }
     }
 
-    public static void perftTime(Bitboard board, int depth)
+    public static long perftTime(Bitboard board, int depth)
     {
         Stopwatch stopwatch = Stopwatch.createStarted();
         long result = perftPure(board, depth, 0);
         stopwatch.stop();
         long millis = stopwatch.elapsed().toMillis();
-        System.out.println(String.format("perft(%s) %6s ms %10s nodes %7s nodes/ms", depth, millis, result, result / millis));
+        System.out.println(String.format("perft(%s) %6s ms %10s nodes %7s nodes/ms", depth, millis, result, millis == 0 ? 0 : result / millis));
+        return result;
     }
 
     private static long perftPure(Bitboard startingBoard, int targetDepth, int currentDepth)

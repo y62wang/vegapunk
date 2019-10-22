@@ -15,30 +15,10 @@ public class Magic
         this.attacks = attacks;
     }
 
-    public int getBitShifts()
-    {
-        return bitShifts;
-    }
-
-    public long getMagic()
-    {
-        return magic;
-    }
-
-    public long getInnerMask()
-    {
-        return innerMask;
-    }
-
-    public long[] getAttacks()
-    {
-        return attacks;
-    }
-
     public long getAttacks(long occupied)
     {
-        long innerOccupied = occupied & getInnerMask();
-        int key = ( int ) ((innerOccupied * getMagic()) >>> getBitShifts());
+        long innerOccupied = occupied & innerMask;
+        int key = ( int ) ((innerOccupied * magic) >>> bitShifts);
         return attacks[key];
     }
 }
