@@ -11,17 +11,6 @@ public class BitScan
     public static int ls1b(long number)
     {
         assert (number != 0);
-        int index = 0;
-
-        while (number != 0)
-        {
-            if ((number & (1L << index)) != 0)
-            {
-                return index;
-            }
-            index++;
-        }
-        assert false;
-        return -1;
+        return Long.numberOfTrailingZeros(number);
     }
 }

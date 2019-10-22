@@ -56,6 +56,11 @@ public class PopulationCount
 
     public static int popCount(long number)
     {
+        return Long.bitCount(number);
+    }
+
+    public static int popCount8(long number)
+    {
         return popLookupTable8Bits[( int ) (MASK_8 & number)]
                + popLookupTable8Bits[( int ) (MASK_8 & (number) >> 8)]
                + popLookupTable8Bits[( int ) (MASK_8 & (number) >> 16)]
