@@ -3,13 +3,11 @@ package com.y62wang.chess.perft;
 import com.google.common.base.Stopwatch;
 import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.Move;
-import com.y62wang.chess.Util;
 import org.junit.Assert;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class Perft
 {
