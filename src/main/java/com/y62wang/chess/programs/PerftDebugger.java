@@ -15,7 +15,11 @@ public class PerftDebugger
         }
         for (int i = 0; i < runs; i++)
         {
+            Bitboard.MAKE_MOVE_TIME = 0;
+            Bitboard.LEGAL_MOVE_TIME = 0;
             Perft.singlePerftNonTest(board, depth, 0);
+            System.out.println(String.format("make_move:   %10s ms", Bitboard.MAKE_MOVE_TIME/1000));
+            System.out.println(String.format("legal_moves: %10s ms", Bitboard.LEGAL_MOVE_TIME/1000));
         }
     }
 }

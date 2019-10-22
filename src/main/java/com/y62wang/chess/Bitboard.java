@@ -1,5 +1,6 @@
 package com.y62wang.chess;
 
+import com.google.common.base.Stopwatch;
 import com.y62wang.chess.bits.BitScan;
 import com.y62wang.chess.bits.Endianess;
 import com.y62wang.chess.bits.PopulationCount;
@@ -50,6 +51,9 @@ import static com.y62wang.chess.BoardUtil.*;
 
 public class Bitboard
 {
+
+    public static long MAKE_MOVE_TIME = 0;
+    public static long LEGAL_MOVE_TIME = 0;
 
     public static final int BOARD_WIDTH = 8;
     public static final int SIZE = 64;
@@ -330,7 +334,7 @@ public class Bitboard
 
     public Bitboard makeMove(short move)
     {
-
+        Stopwatch stopwatch = Stopwatch.createStarted();
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
         assert (intersects(from, occupied()));
@@ -435,6 +439,7 @@ public class Bitboard
         {
             newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
         }
+        MAKE_MOVE_TIME += stopwatch.elapsed().toNanos();
         return new Bitboard(board, nextTurn(), newEnPassantTarget, updatedCastleRights);
     }
 
@@ -466,7 +471,10 @@ public class Bitboard
 
     public Set<Short> legalMoves()
     {
-        return turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
+        Stopwatch started = Stopwatch.createStarted();
+        Set<Short> moves = turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
+        LEGAL_MOVE_TIME += started.elapsed().toNanos();
+        return moves;
     }
 
     public Set<Short> whiteLegalMoves()
@@ -492,7 +500,7 @@ public class Bitboard
             return kingMoves;
         }
 
-        Set<Short> moves = pseudoWhiteMoves(opponentPieces,occupied);
+        Set<Short> moves = pseudoWhiteMoves(opponentPieces, occupied);
 
         // handle pins
         long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, BQ() | BB());
@@ -568,7 +576,7 @@ public class Bitboard
             return kingMoves;
         }
 
-        Set<Short> moves = pseudoBlackMoves(opponentPieces,occupied);
+        Set<Short> moves = pseudoBlackMoves(opponentPieces, occupied);
 
         // handle pins
         long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, WQ() | WB());
@@ -1196,14 +1204,5 @@ public class Bitboard
 
     public void debug()
     {
-  //      castleRights = FULL_CASTLE_RIGHT;
-        // castleRights = unsetCastleBit(castleRights,WK_CASTLE_MASK);
-//        castleRights = unsetCastleBit(castleRights,WQ_CASTLE_MASK);
-//        castleRights = unsetCastleBit(castleRights,BK_CASTLE_MASK);
-//        castleRights = unsetCastleBit(castleRights,BQ_CASTLE_MASK);
-        System.out.println("WK CASTLE " + canCastle(WK_CASTLE_MASK));
-        System.out.println("WQ CASTLE " + canCastle(WQ_CASTLE_MASK));
-        System.out.println("BK CASTLE " + canCastle(BK_CASTLE_MASK));
-        System.out.println("BQ CASTLE " + canCastle(BQ_CASTLE_MASK));
     }
 }
