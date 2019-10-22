@@ -30,7 +30,7 @@ public class Knight
         }
     }
 
-    public static long knightTargets(int square)
+    public static long targets(int square)
     {
         return ATTACKS[square];
     }

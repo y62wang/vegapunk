@@ -30,7 +30,7 @@ public class King
         }
     }
 
-    public static long kingTargets(int square)
+    public static long targets(int square)
     {
         return ATTACKS[square];
     }
