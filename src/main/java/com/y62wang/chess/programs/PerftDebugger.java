@@ -22,8 +22,8 @@ public class PerftDebugger
 
             if (Bitboard.MAKE_MOVE_TIME != 0 || Bitboard.LEGAL_MOVE_TIME != 0)
             {
-                System.out.println(String.format("make_move:   %10s ms", Bitboard.MAKE_MOVE_TIME / 1000));
-                System.out.println(String.format("legal_moves: %10s ms", Bitboard.LEGAL_MOVE_TIME / 1000));
+                System.out.println(String.format("make_move:   %10s ms", Bitboard.MAKE_MOVE_TIME / 1000000));
+                System.out.println(String.format("legal_moves: %10s ms", Bitboard.LEGAL_MOVE_TIME / 1000000));
             }
 
         }

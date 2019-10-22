@@ -15,10 +15,7 @@ public class Perft
 {
     public static void singlePerftNonTest(Bitboard board, int depth, long expectedNodeCount)
     {
-        Map<Integer, Long> map = new HashMap<>();
-        Map<String, Integer> roots = new HashMap<>();
         perftTime(board, depth);
-        roots.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
     }
 
     public static void singlePerft(Bitboard board, int depth, long expectedNodeCount)
