@@ -533,12 +533,12 @@ public class Bitboard
 
         if (intersects(opponentTargets, W_KING_CASTLE_ATTACK_MASK))
         {
-            moves.remove((Short)Move.WHITE_KING_CASTLE_MOVE);
+            moves.remove(( Short ) Move.WHITE_KING_CASTLE_MOVE);
         }
 
         if (intersects(opponentTargets, W_QUEEN_CASTLE_ATTACK_MASK))
         {
-            moves.remove((Short)Move.WHITE_QUEEN_CASTLE_MOVE);
+            moves.remove(( Short ) Move.WHITE_QUEEN_CASTLE_MOVE);
         }
         return moves;
     }
@@ -598,12 +598,12 @@ public class Bitboard
 
         if (intersects(opponentTargets, B_KING_CASTLE_ATTACK_MASK))
         {
-            moves.remove((Short)Move.BLACK_KING_CASTLE_MOVE);
+            moves.remove(( Short ) Move.BLACK_KING_CASTLE_MOVE);
         }
 
         if (intersects(opponentTargets, B_QUEEN_CASTLE_ATTACK_MASK))
         {
-            moves.remove((Short)Move.BLACK_QUEEN_CASTLE_MOVE);
+            moves.remove(( Short ) Move.BLACK_QUEEN_CASTLE_MOVE);
         }
 
         return moves;
@@ -813,17 +813,75 @@ public class Bitboard
 
     private List<Short> pseudoRookMoves(long rooks, long opponentPieces, long occupied)
     {
-        return pseudoSlidingMoves(rooks, opponentPieces, occupied, MagicCache.getInstance()::rookAttacks);
+        List<Short> moves = new ArrayList<Short>();
+        while (rooks != 0)
+        {
+            int rook = BitScan.ls1b(rooks);
+            rooks &= ~lshift(1L, rook);
+            long attackSet = MagicCache.getInstance().rookAttacks(rook, occupied);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(rook, toSquare, moveType));
+            }
+        }
+        return moves;
     }
 
     private List<Short> pseudoBishopMoves(long bishops, long opponentPieces, long occupied)
     {
-        return pseudoSlidingMoves(bishops, opponentPieces, occupied, MagicCache.getInstance()::bishopAttacks);
+        List<Short> moves = new ArrayList<Short>();
+        while (bishops != 0)
+        {
+            int rook = BitScan.ls1b(bishops);
+            bishops &= ~lshift(1L, rook);
+            long attackSet = MagicCache.getInstance().bishopAttacks(rook, occupied);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(rook, toSquare, moveType));
+            }
+        }
+        return moves;
     }
 
     private List<Short> pseudoQueenMoves(long queens, long opponentPieces, long occupied)
     {
-        return pseudoSlidingMoves(queens, opponentPieces, occupied, MagicCache.getInstance()::queenAttacks);
+        List<Short> moves = new ArrayList<Short>();
+        while (queens != 0)
+        {
+            int queen = BitScan.ls1b(queens);
+            queens &= ~lshift(1L, queen);
+
+            // rook attacks
+            long rookAttackSets = MagicCache.getInstance().rookAttacks(queen, occupied);
+            rookAttackSets &= ~occupied | opponentPieces;
+            while (rookAttackSets != 0)
+            {
+                int toSquare = BitScan.ls1b(rookAttackSets);
+                rookAttackSets &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(queen, toSquare, moveType));
+            }
+
+            // bishop attacks
+            long bishopAttackSets = MagicCache.getInstance().bishopAttacks(queen, occupied);
+            bishopAttackSets &= ~occupied | opponentPieces;
+            while (bishopAttackSets != 0)
+            {
+                int toSquare = BitScan.ls1b(bishopAttackSets);
+                bishopAttackSets &= ~squareBB(toSquare);
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                moves.add(Move.move(queen, toSquare, moveType));
+            }
+        }
+        return moves;
     }
 
     private List<Short> pseudoWhiteCastles(long occupied)
