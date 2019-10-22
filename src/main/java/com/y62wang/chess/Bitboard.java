@@ -639,7 +639,7 @@ public class Bitboard
         while (pinners != 0)
         {
             int pinner = BitScan.ls1b(pinners);
-            long pinnerBB = shift(1L, pinner);
+            long pinnerBB = lshift(1L, pinner);
             long inBetweenSquares = InBetweenCache.getInstance().inBetweenSet(pinner, BitScan.ls1b(king));
             pseudoMoves.stream()
                     .filter(m -> intersects(squareBB(Move.fromSquare(m)), inBetweenSquares))
@@ -692,7 +692,7 @@ public class Bitboard
         while (knights != 0)
         {
             int ls1b = BitScan.ls1b(knights);
-            knights &= ~shift(1L, ls1b);
+            knights &= ~lshift(1L, ls1b);
             targets |= Knight.knightTargets(ls1b);
         }
 
@@ -705,7 +705,7 @@ public class Bitboard
         while (kings != 0)
         {
             int ls1b = BitScan.ls1b(kings);
-            kings &= ~shift(1L, ls1b);
+            kings &= ~lshift(1L, ls1b);
             targets |= King.kingTargets(ls1b);
         }
         return targets;
@@ -717,7 +717,7 @@ public class Bitboard
         while (rooks != 0)
         {
             int ls1b = BitScan.ls1b(rooks);
-            rooks &= ~shift(1L, ls1b);
+            rooks &= ~lshift(1L, ls1b);
             attacks |= MagicCache.getInstance().rookAttacks(ls1b, occupied);
         }
         return attacks;
@@ -729,7 +729,7 @@ public class Bitboard
         while (bishops != 0)
         {
             int ls1b = BitScan.ls1b(bishops);
-            bishops &= ~shift(1L, ls1b);
+            bishops &= ~lshift(1L, ls1b);
             attacks |= MagicCache.getInstance().bishopAttacks(ls1b, occupied);
         }
         return attacks;
@@ -1043,7 +1043,7 @@ public class Bitboard
         while (sliders != 0)
         {
             int sliderSq = BitScan.ls1b(sliders);
-            sliders &= ~shift(1L, sliderSq);
+            sliders &= ~lshift(1L, sliderSq);
             long attackSet = magicFn.apply(sliderSq, occupied);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -1063,7 +1063,7 @@ public class Bitboard
         while (fromBB != 0)
         {
             int fromSq = BitScan.ls1b(fromBB);
-            fromBB &= ~shift(1L, fromSq);
+            fromBB &= ~lshift(1L, fromSq);
             long attackSet = fn.apply(fromSq);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -1077,49 +1077,54 @@ public class Bitboard
         return moves;
     }
 
-    private long shift(long x, int s)
+    private long lshift(long x, int s)
     {
-        return (s > 0) ? (x << s) : (x >>> -s);
+        return x << s;
+    }
+
+    private long rshift(long x, int s)
+    {
+        return x >>> s;
     }
 
     private long northOne(long bb)
     {
-        return shift(bb, BOARD_DIM);
+        return lshift(bb, BOARD_DIM);
     }
 
     private long southOne(long bb)
     {
-        return shift(bb, -BOARD_DIM);
+        return rshift(bb, BOARD_DIM);
     }
 
     private long eastOne(long bb)
     {
-        return shift(bb, 1) & ~BB_FILE_A;
+        return lshift(bb, 1) & ~BB_FILE_A;
     }
 
     private long westOne(long bb)
     {
-        return shift(bb, -1) & ~BB_FILE_H;
+        return rshift(bb, 1) & ~BB_FILE_H;
     }
 
     private long NE1(long bb)
     {
-        return shift(bb, 9) & ~BB_FILE_A;
+        return lshift(bb, 9) & ~BB_FILE_A;
     }
 
     private long NW1(long bb)
     {
-        return shift(bb, 7) & ~BB_FILE_H;
+        return lshift(bb, 7) & ~BB_FILE_H;
     }
 
     private long SE1(long bb)
     {
-        return shift(bb, -7) & ~BB_FILE_A;
+        return rshift(bb, 7) & ~BB_FILE_A;
     }
 
     private long SW1(long bb)
     {
-        return shift(bb, -9) & ~BB_FILE_H;
+        return rshift(bb, 9) & ~BB_FILE_H;
     }
 
     private boolean intersects(long a, long b)
