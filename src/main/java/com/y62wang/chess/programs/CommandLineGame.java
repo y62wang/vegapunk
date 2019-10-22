@@ -4,6 +4,7 @@ import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.Move;
 import com.y62wang.chess.ui.HumanPlayer;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
@@ -28,7 +29,7 @@ public class CommandLineGame
         {
             System.out.println("Move " + moveCount + " Turn: " + (board.isWhiteTurn() ? "WHITE" : "BLACK"));
             System.out.println(board);
-            Set<Short> moves = board.legalMoves();
+            Collection<Short> moves = board.legalMoves();
             if (moves.size() == 0)
             {
                 System.out.println("Game over!");

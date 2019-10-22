@@ -37,26 +37,26 @@ public class Move
         assert code >= 0 && code < 16;
 
         short move = 0;
-        move |= (SQUARE_MASK & from) << 10;
-        move |= (SQUARE_MASK & to) << 4;
-        move |= (MOVE_TYPE_MASK & code);
+        move |= (SQUARE_MASK & from) << 10
+                | (SQUARE_MASK & to) << 4
+                | (MOVE_TYPE_MASK & code);
         return move;
     }
 
     public static boolean isPromotion(short move)
     {
         // 3rd bit is a promotion
-        return (move & (1 << 3)) != 0;
+        return (move & 8) != 0;
     }
 
     public static boolean isCapture(short move)
     {
-        return (move & (1 << 2)) != 0;
+        return (move & 4) != 0;
     }
 
     public static boolean isSpecial1(short move)
     {
-        return (move & (1 << 1)) != 0;
+        return (move & 2) != 0;
     }
 
     public static boolean isSpecial0(short move)
@@ -66,14 +66,16 @@ public class Move
 
     public static boolean isCastle(short move)
     {
-        return  isKingCastle(move) || isQueenCastle(move);
+        return isKingCastle(move) || isQueenCastle(move);
     }
 
-    public static boolean isKingCastle(short move) {
+    public static boolean isKingCastle(short move)
+    {
         return moveCode(move) == KING_CASTLE;
     }
 
-    public static boolean isQueenCastle(short move) {
+    public static boolean isQueenCastle(short move)
+    {
         return moveCode(move) == QUEEN_CASTLE;
     }
 
@@ -136,7 +138,7 @@ public class Move
     {
         int fileIndex = fileToIndex(location.charAt(0));
         int rankIndex = rankToIndex(location.charAt(1));
-        return BoardUtil.square(fileIndex,rankIndex);
+        return BoardUtil.square(fileIndex, rankIndex);
     }
 
     public static int fileToIndex(char fileChar)

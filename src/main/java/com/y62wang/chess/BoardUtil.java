@@ -9,6 +9,16 @@ import static com.y62wang.chess.BoardConstants.*;
 
 public class BoardUtil
 {
+    private static final long[] BB_CACHE = new long[Bitboard.SIZE];
+
+    static
+    {
+        for (int i = 0; i < BB_CACHE.length; i++)
+        {
+            BB_CACHE[i] = 1L << i;
+        }
+    }
+
     public static int rank(int square)
     {
         return square / BOARD_DIM;
@@ -36,7 +46,7 @@ public class BoardUtil
 
     public static long squareBB(int square)
     {
-        return 1L << square;
+        return BB_CACHE[square];
     }
 
     public static int square(int file, int rank)

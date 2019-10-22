@@ -7,6 +7,7 @@ import com.y62wang.chess.Util;
 import org.junit.Assert;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -83,7 +84,7 @@ public class Perft
             roots.put(key, roots.get(key) + 1);
             return;
         }
-        Set<Short> legalMoves = startingBoard.legalMoves();
+        List<Short> legalMoves = startingBoard.legalMoves();
 //        String repeated = new String(new char[currentDepth]).replace("\0", "    ");
 //        System.out.print(repeated + "> " + legalMoves.size() + " ");
 //        Util.printMoves(legalMoves);
