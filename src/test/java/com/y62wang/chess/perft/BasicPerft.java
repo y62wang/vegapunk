@@ -1,6 +1,7 @@
 package com.y62wang.chess.perft;
 
 import com.y62wang.chess.Bitboard;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.y62wang.chess.perft.Perft.perft;
@@ -26,6 +27,7 @@ public class BasicPerft
     }
 
     @Test
+    @Ignore
     public void testPerftPosition3()
     {
         long[] tests = new long[] {14, 191, 2812, 43238, 674624, 11030083, 178633661};

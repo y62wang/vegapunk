@@ -25,9 +25,9 @@ public class Perft
         Map<Integer, Long> map = new HashMap<>();
         Map<String, Integer> roots = new HashMap<>();
         perft(board, depth, 0, map, roots, ( short ) 0);
-        // System.out.println(roots.keySet() + " " + roots.values());
+        System.out.println(roots.keySet() + " " + roots.values());
         System.out.println("==============================================================");
-        roots.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
+        // roots.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
         Assert.assertEquals(Long.valueOf(expectedNodeCount), map.getOrDefault(depth, 0L));
     }
 
@@ -44,7 +44,8 @@ public class Perft
         Stopwatch stopwatch = Stopwatch.createStarted();
         long result = perftPure(board, depth, 0);
         stopwatch.stop();
-        System.out.println(String.format("perft(%s) %6s ms %10s nodes", depth, stopwatch.elapsed().toMillis(), result));
+        long millis = stopwatch.elapsed().toMillis();
+        System.out.println(String.format("perft(%s) %6s ms %10s nodes %7s nodes/ms", depth, millis, result, result / millis));
     }
 
     private static long perftPure(Bitboard startingBoard, int targetDepth, int currentDepth)

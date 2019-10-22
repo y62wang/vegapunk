@@ -333,9 +333,8 @@ public class Bitboard
         return BP | BN | BB | BR | BK | BQ;
     }
 
-    private long whiteTargets()
+    private long whiteTargets(final long occupied)
     {
-        long occupied = occupied();
         long targets = kingTargets(WK)
                        | queenTargets(WQ, occupied & ~BK)
                        | knightTargets(WN)
@@ -346,9 +345,8 @@ public class Bitboard
         return targets;
     }
 
-    private long blackTargets()
+    private long blackTargets(long occupied)
     {
-        long occupied = occupied();
         long targets = kingTargets(BK)
                        | queenTargets(BQ, occupied & ~WK)
                        | knightTargets(BN)
@@ -367,7 +365,7 @@ public class Bitboard
         assert (intersects(from, occupied()));
 
         long[][] board = new long[][] {{WK, WQ, WR, WB, WN, WP}, {BK, BQ, BR, BB, BN, BP}};
-        int myColor = intersects(whitePieces(), from) ? 0 : 1;
+        int myColor = turn;
         int opponentColor = 1 - myColor;
 
         if (Move.isPromotion(move))
@@ -397,7 +395,7 @@ public class Bitboard
         }
         else if (Move.isEnpassant(move))
         {
-            if (isWhiteTurn())
+            if (turn == WHITE)
             {
                 removePiece(southOne(to), board[BLACK]);
             }
@@ -496,7 +494,7 @@ public class Bitboard
 
     public Set<Short> legalMoves()
     {
-        return isWhiteTurn() ? whiteLegalMoves() : blackLegalMoves();
+        return turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
     }
 
     public Set<Short> whiteLegalMoves()
@@ -506,7 +504,7 @@ public class Bitboard
         long occupied = occupied();
         long myKing = WK;
         long attackersToKing = opponentPieces & attackersTo(myKing, occupied);
-        long opponentTargets = blackTargets();
+        long opponentTargets = blackTargets(occupied);
         int numAttackers = PopulationCount.popCount(attackersToKing);
 
         Set<Short> kingMoves = pseudoKingMoves(myKing, opponentPieces, occupied)
@@ -514,7 +512,7 @@ public class Bitboard
                 .filter(move -> !intersects(squareBB(Move.toSquare(move)), opponentTargets))
                 .collect(Collectors.toSet());
 
-        Set<Short> castleMoves = pseudoWhiteCastles();
+        Set<Short> castleMoves = pseudoWhiteCastles(occupied);
 
         if (numAttackers == 2)
         {
@@ -522,7 +520,7 @@ public class Bitboard
             return kingMoves;
         }
 
-        Set<Short> moves = pseudoWhiteMoves();
+        Set<Short> moves = pseudoWhiteMoves(opponentPieces,occupied);
 
         // handle pins
         long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, BQ | BB);
@@ -555,7 +553,7 @@ public class Bitboard
                                  || ((intersects(attackerBB, blackSliders()) && intersects((Move.toSquareBB(m)), betweenKingAndAttacker)))
                            )
                     .collect(Collectors.toSet());
-            singleAttackerMoves.removeAll(pseudoWhiteCastles());
+            singleAttackerMoves.removeAll(pseudoWhiteCastles(occupied));
             return singleAttackerMoves;
         }
 
@@ -578,7 +576,7 @@ public class Bitboard
         long occupied = occupied();
         long myKing = BK;
         long attackersToKing = opponentPieces & attackersTo(myKing, occupied);
-        long opponentTargets = whiteTargets();
+        long opponentTargets = whiteTargets(occupied);
 
         int numAttackers = PopulationCount.popCount(attackersToKing);
 
@@ -590,7 +588,7 @@ public class Bitboard
 //        kingMoves.forEach(s -> System.out.println(Move.moveString(s) + " " + s));
 //        Util.printBitboard(opponentTargets);
 
-        Set<Short> castleMoves = pseudoBlackCastles();
+        Set<Short> castleMoves = pseudoBlackCastles(occupied);
 
         if (numAttackers == 2)
         {
@@ -598,7 +596,7 @@ public class Bitboard
             return kingMoves;
         }
 
-        Set<Short> moves = pseudoBlackMoves();
+        Set<Short> moves = pseudoBlackMoves(opponentPieces,occupied);
 
         // handle pins
         long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, WQ | WB);
@@ -623,7 +621,7 @@ public class Bitboard
                                  || ((intersects(attackerBB, whiteSliders()) && intersects((Move.toSquareBB(m)), betweenKingAndAttacker)))
                            )
                     .collect(Collectors.toSet());
-            singleAttackerMoves.removeAll(pseudoBlackCastles());
+            singleAttackerMoves.removeAll(pseudoBlackCastles(occupied));
             return singleAttackerMoves;
         }
 
@@ -804,11 +802,9 @@ public class Bitboard
         return SW1(blackPawns);
     }
 
-    private Set<Short> pseudoWhiteMoves()
+    private Set<Short> pseudoWhiteMoves(long opponentPieces, long occupied)
     {
         Set<Short> moves = new HashSet<>();
-        long opponentPieces = blackPieces();
-        long occupied = occupied();
 
         moves.addAll(pseudoBishopMoves(WB, opponentPieces, occupied));
         moves.addAll(pseudoRookMoves(WR, opponentPieces, occupied));
@@ -816,15 +812,13 @@ public class Bitboard
         moves.addAll(pseudoKingMoves(WK, opponentPieces, occupied));
         moves.addAll(pseudoKnightMoves(WN, opponentPieces, occupied));
         moves.addAll(pseudoWhitePawnMoves(WP, opponentPieces, occupied));
-        moves.addAll(pseudoWhiteCastles());
+        moves.addAll(pseudoWhiteCastles(occupied));
         return moves;
     }
 
-    private Set<Short> pseudoBlackMoves()
+    private Set<Short> pseudoBlackMoves(long opponentPieces, long occupied)
     {
         Set<Short> moves = new HashSet<>();
-        long opponentPieces = whitePieces();
-        long occupied = occupied();
 
         moves.addAll(pseudoBishopMoves(BB, opponentPieces, occupied));
         moves.addAll(pseudoRookMoves(BR, opponentPieces, occupied));
@@ -832,7 +826,7 @@ public class Bitboard
         moves.addAll(pseudoKingMoves(BK, opponentPieces, occupied));
         moves.addAll(pseudoKnightMoves(BN, opponentPieces, occupied));
         moves.addAll(pseudoBlackPawnMoves(BP, opponentPieces, occupied));
-        moves.addAll(pseudoBlackCastles());
+        moves.addAll(pseudoBlackCastles(occupied));
         return moves;
     }
 
@@ -861,10 +855,10 @@ public class Bitboard
         return pseudoSlidingMoves(queens, opponentPieces, occupied, MagicCache.getInstance()::queenAttacks);
     }
 
-    private Set<Short> pseudoWhiteCastles()
+    private Set<Short> pseudoWhiteCastles(long occupied)
     {
         Set<Short> moves = new HashSet<>();
-        if (((W_KING_CASTLE_CLEAR_MASK) & occupied()) == 0
+        if (((W_KING_CASTLE_CLEAR_MASK) & occupied) == 0
             && (WK & squareBB(SQ_E1)) != 0
             && (WR & squareBB(SQ_H1)) != 0
             && canCastle(WK_CASTLE_MASK))
@@ -872,7 +866,7 @@ public class Bitboard
             moves.add(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
         }
 
-        if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied()) == 0
+        if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
             && (WK & squareBB(SQ_E1)) != 0
             && (WR & squareBB(SQ_A1)) != 0
             && canCastle(WQ_CASTLE_MASK))
@@ -882,10 +876,10 @@ public class Bitboard
         return moves;
     }
 
-    private Set<Short> pseudoBlackCastles()
+    private Set<Short> pseudoBlackCastles(long occupied)
     {
         Set<Short> moves = new HashSet<>();
-        if (((B_KING_CASTLE_CLEAR_MASK) & occupied()) == 0
+        if (((B_KING_CASTLE_CLEAR_MASK) & occupied) == 0
             && (BK & squareBB(SQ_E8)) != 0
             && (BR & squareBB(SQ_H8)) != 0
             && this.canCastle(BK_CASTLE_MASK))
@@ -893,7 +887,7 @@ public class Bitboard
             moves.add(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
         }
 
-        if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied()) == 0
+        if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
             && (BK & squareBB(SQ_E8)) != 0
             && (BR & squareBB(SQ_A8)) != 0
             && this.canCastle(BQ_CASTLE_MASK))
@@ -907,17 +901,16 @@ public class Bitboard
     {
         Set<Short> moves = new HashSet<>();
 
-        long empty = emptySquares();
-        long blackPieces = blackPieces();
+        long empty = ~occupied;
 
         long singlePushes = whitePawnSinglePushTargets(whitePawns, empty) & ~BB_RANK_8;
         long doublePushes = whitePawnDoublePushTargets(whitePawns, empty);
-        long attacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
-        long attacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & ~BB_RANK_8;
+        long attacksNE = whitePawnsEastAttackTargets(whitePawns) & opponentPieces & ~BB_RANK_8;
+        long attacksNW = whitePawnsWestAttackTargets(whitePawns) & opponentPieces & ~BB_RANK_8;
 
         long promotionsPush = whitePawnSinglePushTargets(whitePawns, empty) & BB_RANK_8;
-        long promotionAttacksNE = whitePawnsEastAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
-        long promotionAttacksNW = whitePawnsWestAttackTargets(whitePawns) & blackPieces & BB_RANK_8;
+        long promotionAttacksNE = whitePawnsEastAttackTargets(whitePawns) & opponentPieces & BB_RANK_8;
+        long promotionAttacksNW = whitePawnsWestAttackTargets(whitePawns) & opponentPieces & BB_RANK_8;
 
         addPawnMoves(singlePushes, Direction.NORTH, Move.QUIET_MOVE, moves);
         addPawnMoves(doublePushes, Direction.NORTH * 2, Move.DOUBLE_PAWN_PUSH, moves);
@@ -928,7 +921,7 @@ public class Bitboard
         addPawnPromotions(promotionAttacksNE, Direction.NORTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, moves);
 
-        addEnPassantForWhite(moves);
+        addEnPassantForWhite(occupied, moves);
         return moves;
     }
 
@@ -936,17 +929,16 @@ public class Bitboard
     {
         Set<Short> moves = new HashSet<>();
 
-        long empty = emptySquares();
-        long whitePieces = whitePieces();
+        long empty = ~occupied;
 
         long singlePushes = blackPawnSinglePushTargets(blackPawns, empty) & ~BB_RANK_1;
         long doublePushes = blackPawnDoublePushTargets(blackPawns, empty);
-        long attacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
-        long attacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & ~BB_RANK_1;
+        long attacksSE = blackPawnsEastAttackTargets(blackPawns) & opponentPieces & ~BB_RANK_1;
+        long attacksSW = blackPawnsWestAttackTargets(blackPawns) & opponentPieces & ~BB_RANK_1;
 
         long promotionsPush = blackPawnSinglePushTargets(blackPawns, empty) & BB_RANK_1;
-        long promotionAttacksSE = blackPawnsEastAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
-        long promotionAttacksSW = blackPawnsWestAttackTargets(blackPawns) & whitePieces & BB_RANK_1;
+        long promotionAttacksSE = blackPawnsEastAttackTargets(blackPawns) & opponentPieces & BB_RANK_1;
+        long promotionAttacksSW = blackPawnsWestAttackTargets(blackPawns) & opponentPieces & BB_RANK_1;
 
         addPawnMoves(singlePushes, Direction.SOUTH, Move.QUIET_MOVE, moves);
         addPawnMoves(doublePushes, Direction.SOUTH * 2, Move.DOUBLE_PAWN_PUSH, moves);
@@ -957,7 +949,7 @@ public class Bitboard
         addPawnPromotions(promotionAttacksSE, Direction.SOUTH_EAST, true, moves);
         addPawnPromotions(promotionAttacksSW, Direction.SOUTH_WEST, true, moves);
 
-        addEnPassantForBlack(moves);
+        addEnPassantForBlack(occupied, moves);
 
         return moves;
     }
@@ -987,7 +979,7 @@ public class Bitboard
         }
     }
 
-    private void addEnPassantForWhite(Set<Short> moves)
+    private void addEnPassantForWhite(long occupied, Set<Short> moves)
     {
         int enpassantFile = this.enPassantTarget;
         if (enpassantFile < 0)
@@ -999,18 +991,18 @@ public class Bitboard
         long targetSquareBB = squareBB(enpassantFile, RANK_6);
         int targetSquare = square(enpassantFile, RANK_6);
 
-        if (intersects(targetPawnBB, BP) && intersects(eastOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
+        if (intersects(targetPawnBB, BP) && intersects(eastOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied))
         {
             moves.add(Move.move(targetSquare + Direction.SOUTH_WEST, targetSquare, Move.EP_CAPTURE));
         }
 
-        if (intersects(targetPawnBB, BP) && intersects(westOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
+        if (intersects(targetPawnBB, BP) && intersects(westOne(WP), targetPawnBB) && !intersects(targetSquareBB, occupied))
         {
             moves.add(Move.move(targetSquare + Direction.SOUTH_EAST, targetSquare, Move.EP_CAPTURE));
         }
     }
 
-    private void addEnPassantForBlack(Set<Short> moves)
+    private void addEnPassantForBlack(long occupied, Set<Short> moves)
     {
         int enpassantFile = this.enPassantTarget;
         if (enpassantFile < 0)
@@ -1022,12 +1014,12 @@ public class Bitboard
         long targetSquareBB = squareBB(enpassantFile, RANK_3);
         int targetSquare = square(enpassantFile, RANK_3);
 
-        if (intersects(targetPawnBB, WP) && intersects(eastOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
+        if (intersects(targetPawnBB, WP) && intersects(eastOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied))
         {
             moves.add(Move.move(targetSquare + Direction.NORTH_WEST, targetSquare, Move.EP_CAPTURE));
         }
 
-        if (intersects(targetPawnBB, WP) && intersects(westOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied()))
+        if (intersects(targetPawnBB, WP) && intersects(westOne(BP), targetPawnBB) && !intersects(targetSquareBB, occupied))
         {
             moves.add(Move.move(targetSquare + Direction.NORTH_EAST, targetSquare, Move.EP_CAPTURE));
         }
