@@ -3,6 +3,7 @@ package com.y62wang.chess.perft;
 import com.google.common.base.Stopwatch;
 import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.Move;
+import com.y62wang.chess.Util;
 import org.junit.Assert;
 
 import java.util.HashMap;
@@ -34,8 +35,7 @@ public class Perft
     {
         for (int index = 0; index < expectedNodeCountByDepth.length; index++)
         {
-            // singlePerft(startingBoard, index + 1, expectedNodeCountByDepth[index]);
-            perftPure(startingBoard, index+1, 0);
+            singlePerft(startingBoard, index + 1, expectedNodeCountByDepth[index]);
         }
     }
 
@@ -77,13 +77,18 @@ public class Perft
             nodes.putIfAbsent(targetDepth, 0L);
             nodes.put(targetDepth, nodes.get(targetDepth) + 1);
             String key = Move.moveString(startingBoard.rootMove);
+            // String key = startingBoard.rootMove.toString() + "-" + startingBoard.rootMove.getFlag();
             roots.putIfAbsent(key, 0);
             roots.put(key, roots.get(key) + 1);
             return;
         }
         Set<Short> legalMoves = startingBoard.legalMoves();
+//        String repeated = new String(new char[currentDepth]).replace("\0", "    ");
+//        System.out.print(repeated + "> " + legalMoves.size() + " ");
+//        Util.printMoves(legalMoves);
         for (short possibleMove : legalMoves)
         {
+//            System.out.println(repeated + " Making move " + Move.moveString(possibleMove));
             Bitboard board = startingBoard.makeMove(possibleMove);
             if (currentDepth == 0)
             {

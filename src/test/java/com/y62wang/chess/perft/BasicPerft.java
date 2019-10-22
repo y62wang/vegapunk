@@ -28,7 +28,7 @@ public class BasicPerft
     @Test
     public void testPerftPosition3()
     {
-        long[] tests = new long[] {14, 191, 2812, 43238, 674624, 11030083, }; // 178633661
+        long[] tests = new long[] {14, 191, 2812, 43238, 674624, 11030083, 178633661};
         char[] boardArray = new char[] {
                 ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
                 ' ', ' ', 'p', ' ', ' ', ' ', ' ', ' ',
