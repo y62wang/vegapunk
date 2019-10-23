@@ -3,11 +3,13 @@ package com.y62wang.chess;
 import com.y62wang.chess.bits.BitScan;
 import com.y62wang.chess.bits.Endianess;
 import com.y62wang.chess.bits.PopulationCount;
+import com.y62wang.chess.enums.Piece;
+import com.y62wang.chess.enums.PieceType;
+import com.y62wang.chess.enums.Side;
 import com.y62wang.chess.magic.MagicCache;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_A1;
@@ -57,39 +59,33 @@ public class Bitboard
     public static final int BOARD_WIDTH = 8;
     public static final int SIZE = 64;
 
-    private static final int KING = 5;
-    private static final int QUEEN = 4;
-    private static final int ROOK = 3;
-    private static final int BISHOP = 2;
-    private static final int KNIGHT = 1;
-    private static final int PAWN = 0;
-
     private static final int WK_CASTLE_SHIFT = 0;
     private static final int WQ_CASTLE_SHIFT = 1;
     private static final int BK_CASTLE_SHIFT = 2;
     private static final int BQ_CASTLE_SHIFT = 3;
+
     private static final short WK_CASTLE_MASK = 1;
     private static final short WQ_CASTLE_MASK = 2;
     private static final short BK_CASTLE_MASK = 4;
     private static final short BQ_CASTLE_MASK = 8;
     private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
     public static final int NO_EP_TARGET = -1;
+    private short fullMoveNumber;
     private short castleRights;
-
-    public static byte WHITE = 0;
-    public static byte BLACK = 1;
+    private short halfMoveClock;
 
     private int epFileIndex = NO_EP_TARGET;
-    private byte turn;
-    private long[][] pieces;
+    private Side turn;
+    private PieceList pieceList;
     public short rootMove;
 
-    public Bitboard(long[][] boardPieces, byte turn, int epFileIndex, short castleRights)
+    public Bitboard(PieceList pieceList, Side turn, int epFileIndex, short castleRights, short halfMoveClock)
     {
-        this.pieces = boardPieces;
         this.turn = turn;
         this.epFileIndex = epFileIndex;
         this.castleRights = castleRights;
+        this.halfMoveClock = halfMoveClock;
+        this.pieceList = pieceList;
     }
 
     public Bitboard()
@@ -97,7 +93,7 @@ public class Bitboard
         this(CharacterUtilities.toLittleEndianBoard(NEW_BOARD_CHARS));
     }
 
-    public Bitboard(final char[] chars, final byte turn)
+    public Bitboard(final char[] chars, final Side turn)
     {
         this(CharacterUtilities.toLittleEndianBoard(chars));
         this.turn = turn;
@@ -128,23 +124,26 @@ public class Bitboard
             }
         }
         assignPiece(CharacterUtilities.toLittleEndianBoard(sb.toString().toCharArray()));
-        turn = ( byte ) (tokens[1].equalsIgnoreCase("w") ? 0 : 1);
+        turn = (tokens[1].equalsIgnoreCase("w") ? Side.WHITE : Side.BLACK);
         castleRights |= tokens[2].contains("K") ? 1 : 0;
         castleRights |= tokens[2].contains("Q") ? (1 << 1) : 0;
         castleRights |= tokens[2].contains("k") ? (1 << 2) : 0;
         castleRights |= tokens[2].contains("q") ? (1 << 3) : 0;
         epFileIndex = tokens[3].equals("-") ? -1 : Integer.parseInt(tokens[3]) - 1;
+        halfMoveClock = tokens.length > 4 ? Short.parseShort(tokens[4]) : 0;
+        fullMoveNumber = tokens.length > 5 ? Short.parseShort(tokens[5]) : 0;
     }
 
     public Bitboard(char[] board)
     {
         assignPiece(board);
+        turn = Side.WHITE;
         castleRights = FULL_CASTLE_RIGHT;
     }
 
     private void assignPiece(final char[] board)
     {
-        pieces = new long[2][6];
+        pieceList = new PieceList();
 
         if (board.length != SIZE)
         {
@@ -153,50 +152,12 @@ public class Bitboard
 
         for (int i = 0; i < board.length; i++)
         {
-            final char piece = board[i];
+            final char pieceChar = board[i];
             final long pos = 1L << i;
-            switch (piece)
+            Piece piece = Piece.of(pieceChar);
+            if (piece != Piece.NO_PIECE)
             {
-                case 'r':
-                    pieces[BLACK][ROOK] = pieces[BLACK][ROOK] | pos;
-                    break;
-                case 'n':
-                    pieces[BLACK][KNIGHT] = pieces[BLACK][KNIGHT] | pos;
-                    break;
-                case 'b':
-                    pieces[BLACK][BISHOP] = pieces[BLACK][BISHOP] | pos;
-                    break;
-                case 'q':
-                    pieces[BLACK][QUEEN] = pieces[BLACK][QUEEN] | pos;
-                    break;
-                case 'k':
-                    pieces[BLACK][KING] = pieces[BLACK][KING] | pos;
-                    break;
-                case 'p':
-                    pieces[BLACK][PAWN] = pieces[BLACK][PAWN] | pos;
-                    break;
-                case 'R':
-                    pieces[WHITE][ROOK] = pieces[WHITE][ROOK] | pos;
-                    break;
-                case 'N':
-                    pieces[WHITE][KNIGHT] = pieces[WHITE][KNIGHT] | pos;
-                    break;
-                case 'B':
-                    pieces[WHITE][BISHOP] = pieces[WHITE][BISHOP] | pos;
-                    break;
-                case 'Q':
-                    pieces[WHITE][QUEEN] = pieces[WHITE][QUEEN] | pos;
-                    break;
-                case 'K':
-                    pieces[WHITE][KING] = pieces[WHITE][KING] | pos;
-                    break;
-                case 'P':
-                    pieces[WHITE][PAWN] = pieces[WHITE][PAWN] | pos;
-                    break;
-                case ' ':
-                    break;
-                default:
-                    throw new RuntimeException("Invalid piece " + piece);
+                pieceList.addPiece(piece, i);
             }
         }
     }
@@ -277,19 +238,19 @@ public class Bitboard
         return sb.toString();
     }
 
-    private byte nextTurn()
+    private Side nextTurn()
     {
-        return turn == WHITE ? BLACK : WHITE;
+        return turn == Side.WHITE ? Side.BLACK : Side.WHITE;
     }
 
     public boolean isWhiteTurn()
     {
-        return turn == WHITE;
+        return turn == Side.WHITE;
     }
 
     public long occupied()
     {
-        return WP() | WN() | WB() | WR() | WK() | WQ() | BP() | BN() | BB() | BR() | BK() | BQ();
+        return this.pieceList.occupied();
     }
 
     private long emptySquares()
@@ -336,69 +297,66 @@ public class Bitboard
         // Stopwatch started = Stopwatch.createStarted();
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
+        int fromSquare = Move.fromSquare(move);
+        int toSquare = Move.toSquare(move);
         assert (intersects(from, occupied()));
 
-        long[][] board = new long[][] {{WP(), WN(), WB(), WR(), WQ(), WK()}, {BP(), BN(), BB(), BR(), BQ(), BK()}};
+        PieceList copy = pieceList.copy();
 
-        int myColor = turn;
-        int opponentColor = 1 - myColor;
-
-        if (Move.isPromotion(move))
+        if (Move.moveCode(move) == Move.QUIET_MOVE || Move.moveCode(move) == Move.CAPTURES || Move.moveCode(move) == Move.DOUBLE_PAWN_PUSH)
         {
-            removePiece(from, board[myColor]);
             if (Move.isCapture(move))
             {
-                removePiece(to, board[opponentColor]);
+                copy.removePiece(toSquare);
+            }
+            copy.movePiece(fromSquare, toSquare);
+        }
+        else if (Move.isKingCastle(move))
+        {
+            copy.movePiece(fromSquare, toSquare);
+            copy.movePiece(toSquare + 1, toSquare - 1);
+        }
+        else if (Move.isQueenCastle(move))
+        {
+            copy.movePiece(fromSquare, toSquare);
+            copy.movePiece(toSquare - 2, toSquare + 1);
+        }
+        if (Move.isPromotion(move))
+        {
+            copy.removePiece(fromSquare);
+            if (Move.isCapture(move))
+            {
+                copy.removePiece(toSquare);
             }
 
             if (Move.moveCode(move) == Move.QUEEN_PROMOTION || Move.moveCode(move) == Move.QUEEN_PROMO_CAPTURE)
             {
-                board[myColor][QUEEN] |= to;
+                copy.addPiece(turn, PieceType.QUEEN, toSquare);
             }
             else if (Move.moveCode(move) == Move.ROOK_PROMOTION || Move.moveCode(move) == Move.ROOK_PROMO_CAPTURE)
             {
-                board[myColor][ROOK] |= to;
+                copy.addPiece(turn, PieceType.ROOK, toSquare);
             }
             else if (Move.moveCode(move) == Move.BISHOP_PROMOTION || Move.moveCode(move) == Move.BISHOP_PROMO_CAPTURE)
             {
-                board[myColor][BISHOP] |= to;
+                copy.addPiece(turn, PieceType.BISHOP, toSquare);
             }
             else if (Move.moveCode(move) == Move.KNIGHT_PROMOTION || Move.moveCode(move) == Move.KNIGHT_PROMO_CAPTURE)
             {
-                board[myColor][KNIGHT] |= to;
+                copy.addPiece(turn, PieceType.KNIGHT, toSquare);
             }
         }
         else if (Move.isEnpassant(move))
         {
-            if (turn == WHITE)
+            if (turn == Side.WHITE)
             {
-                removePiece(southOne(to), board[BLACK]);
+                copy.removePiece(toSquare + Direction.SOUTH);
             }
             else
             {
-                removePiece(northOne(to), board[WHITE]);
+                copy.removePiece(toSquare + Direction.NORTH);
             }
-            movePiece(from, to, board[myColor]);
-        }
-        else if (Move.isKingCastle(move))
-        {
-            int toSquare = Move.toSquare(move);
-            movePiece(from, to, board[myColor]);
-            movePiece(squareBB(toSquare + 1), squareBB(toSquare - 1), board[myColor]);
-        }
-        else if (Move.isQueenCastle(move))
-        {
-            int toSquare = Move.toSquare(move);
-            movePiece(from, to, board[myColor]);
-            movePiece(squareBB(toSquare - 2), squareBB(toSquare + 1), board[myColor]);
-        }
-        else
-        {
-            if (Move.isCapture(move))
-            {
-                removePiece(to, board[opponentColor]);
-            }
-            movePiece(from, to, board[myColor]);
+            copy.movePiece(fromSquare, toSquare);
         }
 
         short updatedCastleRights = castleRights;
@@ -439,7 +397,8 @@ public class Bitboard
             newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
         }
         // MAKE_MOVE_TIME += started.elapsed().toNanos();
-        return new Bitboard(board, nextTurn(), newEnPassantTarget, updatedCastleRights);
+        Bitboard bitboard = new Bitboard(copy, nextTurn(), newEnPassantTarget, updatedCastleRights, halfMoveClock);
+        return bitboard;
     }
 
     private void movePiece(long from, long to, long[] board)
@@ -471,19 +430,21 @@ public class Bitboard
     public List<Short> legalMoves()
     {
         // Stopwatch started = Stopwatch.createStarted();
-        List<Short> moves = turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
+        List<Short> moves = isWhiteTurn() ? whiteLegalMoves() : blackLegalMoves();
         // LEGAL_MOVE_TIME+= started.elapsed().toNanos();
+
         return moves;
     }
 
     private List<Short> legalMovesBackup()
     {
         long occupied = occupied();
-        long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
-        long myKing = pieces[turn][KING];
-        long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
-        long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, pieces[1 - turn][QUEEN] | pieces[1 - turn][BISHOP]);
-        long rqPinners = rookQueenPinners(myKing, ownPieces, occupied, pieces[1 - turn][QUEEN] | pieces[1 - turn][ROOK]);
+        long ownPieces = isWhiteTurn() ? whitePieces() : blackPieces();
+        long myKing = pieceList.piecesBB(turn, PieceType.KING);
+        long opponentTargets = isWhiteTurn() ? blackTargets(occupied) : whiteTargets(occupied);
+        long opponentQueenBB = pieceList.piecesBB(turn.flip(), PieceType.QUEEN);
+        long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, opponentQueenBB | pieceList.piecesBB(turn.flip(), PieceType.BISHOP));
+        long rqPinners = rookQueenPinners(myKing, ownPieces, occupied, opponentQueenBB | pieceList.piecesBB(turn.flip(), PieceType.ROOK));
         List<Short> legal = new ArrayList<>();
         for (final Short pseudoMove : pseudoMoves())
         {
@@ -497,7 +458,7 @@ public class Bitboard
 
     private boolean isLegal(short move, long opponentTargets, long pinners)
     {
-        long king = pieces[turn][KING];
+        long king = pieceList.piecesBB(turn, PieceType.KING);
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
 
@@ -505,11 +466,11 @@ public class Bitboard
         {
             if (Move.isKingCastle(move))
             {
-                return !intersects(CASTLE_ATTACK_MASKS[turn][0], opponentTargets);
+                return !intersects(CASTLE_ATTACK_MASKS[turn.index][0], opponentTargets);
             }
             else if (Move.isQueenCastle(move))
             {
-                return !intersects(CASTLE_ATTACK_MASKS[turn][1], opponentTargets);
+                return !intersects(CASTLE_ATTACK_MASKS[turn.index][1], opponentTargets);
             }
             return !intersects(to, opponentTargets);
         }
@@ -537,9 +498,10 @@ public class Bitboard
 
     private List<Short> pseudoMoves()
     {
-        long opponentPieces = turn == WHITE ? blackPieces() : whitePieces();
+        boolean whiteTurn = isWhiteTurn();
+        long opponentPieces = whiteTurn ? blackPieces() : whitePieces();
         long occupied = occupied();
-        return turn == WHITE ? pseudoWhiteMoves(opponentPieces, occupied) : pseudoBlackMoves(opponentPieces, occupied);
+        return whiteTurn ? pseudoWhiteMoves(opponentPieces, occupied) : pseudoBlackMoves(opponentPieces, occupied);
     }
 
     public List<Short> whiteLegalMoves()
@@ -1278,65 +1240,66 @@ public class Bitboard
 
     private long WK()
     {
-        return pieces[WHITE][KING];
+        return pieceList.piecesBB(Piece.W_KING);
     }
 
     private long WQ()
     {
-        return pieces[WHITE][QUEEN];
+        return pieceList.piecesBB(Piece.W_QUEEN);
     }
 
     private long WR()
     {
-        return pieces[WHITE][ROOK];
+        return pieceList.piecesBB(Piece.W_ROOK);
     }
 
     private long WB()
     {
-        return pieces[WHITE][BISHOP];
+        return pieceList.piecesBB(Piece.W_BISHOP);
     }
 
     private long WN()
     {
-        return pieces[WHITE][KNIGHT];
+        return pieceList.piecesBB(Piece.W_KNIGHT);
     }
 
     private long WP()
     {
-        return pieces[WHITE][PAWN];
+        return pieceList.piecesBB(Piece.W_PAWN);
     }
 
     private long BK()
     {
-        return pieces[BLACK][KING];
+        return pieceList.piecesBB(Piece.B_KING);
     }
 
     private long BQ()
     {
-        return pieces[BLACK][QUEEN];
+        return pieceList.piecesBB(Piece.B_QUEEN);
     }
 
     private long BR()
     {
-        return pieces[BLACK][ROOK];
+        return pieceList.piecesBB(Piece.B_ROOK);
     }
 
     private long BB()
     {
-        return pieces[BLACK][BISHOP];
+        return pieceList.piecesBB(Piece.B_BISHOP);
     }
 
     private long BN()
     {
-        return pieces[BLACK][KNIGHT];
+        return pieceList.piecesBB(Piece.B_KNIGHT);
     }
 
     private long BP()
     {
-        return pieces[BLACK][PAWN];
+        return pieceList.piecesBB(Piece.B_PAWN);
     }
 
     public void debug()
     {
+        Util.printBitboard(this.pieceList.occupied());
     }
 }
