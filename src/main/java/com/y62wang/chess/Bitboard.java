@@ -6,8 +6,8 @@ import com.y62wang.chess.bits.PopulationCount;
 import com.y62wang.chess.magic.MagicCache;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_A1;
@@ -470,9 +470,19 @@ public class Bitboard
 
     public List<Short> legalMoves()
     {
-        // Stopwatch started = Stopwatch.createStarted();
-        List<Short> moves = turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
-        // LEGAL_MOVE_TIME+= started.elapsed().toNanos();
+        List<Short> moves = legalMovesBackup();
+        List<Short> moves2 = turn == WHITE ? whiteLegalMoves() : blackLegalMoves();
+        Collections.sort(moves);
+        Collections.sort(moves2);
+        if (moves.size() != moves2.size())
+        {
+            System.out.println("NEW MOVES RESULT");
+            Util.printMoves(moves);
+            System.out.println("OLD MOVES RESULT");
+            Util.printMoves(moves2);
+            System.out.println(this);
+            assert moves.size() == moves2.size();
+        }
         return moves;
     }
 
@@ -480,14 +490,16 @@ public class Bitboard
     {
         long occupied = occupied();
         long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
+        long opponentPieces = occupied & ~ownPieces;
         long myKing = pieces[turn][KING];
+        long attackers = opponentPieces & attackersTo(myKing, occupied);
         long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
         long bqPinners = bishopQueenPinners(myKing, ownPieces, occupied, pieces[1 - turn][QUEEN] | pieces[1 - turn][BISHOP]);
         long rqPinners = rookQueenPinners(myKing, ownPieces, occupied, pieces[1 - turn][QUEEN] | pieces[1 - turn][ROOK]);
         List<Short> legal = new ArrayList<>();
         for (final Short pseudoMove : pseudoMoves())
         {
-            if (isLegal(pseudoMove, opponentTargets, bqPinners | rqPinners))
+            if (isLegal(pseudoMove, opponentTargets, bqPinners | rqPinners, attackers))
             {
                 legal.add(pseudoMove);
             }
@@ -495,7 +507,7 @@ public class Bitboard
         return legal;
     }
 
-    private boolean isLegal(short move, long opponentTargets, long pinners)
+    private boolean isLegal(short move, long opponentTargets, long pinners, long attackersToKing)
     {
         long king = pieces[turn][KING];
         long from = Move.fromSquareBB(move);
@@ -505,19 +517,42 @@ public class Bitboard
         {
             if (Move.isKingCastle(move))
             {
-                return !intersects(CASTLE_ATTACK_MASKS[turn][0], opponentTargets);
+                return !intersects(CASTLE_ATTACK_MASKS[turn][0], opponentTargets) && attackersToKing == 0;
             }
             else if (Move.isQueenCastle(move))
             {
-                return !intersects(CASTLE_ATTACK_MASKS[turn][1], opponentTargets);
+                return !intersects(CASTLE_ATTACK_MASKS[turn][1], opponentTargets) && attackersToKing == 0;
             }
             return !intersects(to, opponentTargets);
         }
 
-        return !isMoveRestrictedByPin(king, pinners, from, to) && !intersects(king, opponentTargets);
+        return canPreventKingAttack(king, attackersToKing, to) && !isPinned(king, pinners, from, to);
     }
 
-    private boolean isMoveRestrictedByPin(long king, long pinners, long moveFrom, long moveTo)
+    private boolean canPreventKingAttack(long king, long sliderAttackers, long moveTo)
+    {
+        int kingSq = BitScan.ls1b(king);
+        int attackersCount = PopulationCount.popCount(sliderAttackers);
+        if (attackersCount == 0)
+        {
+            return true;
+        }
+        else if (attackersCount == 2)
+        {
+            return false;
+        }
+
+        while (sliderAttackers != 0)
+        {
+            int slider = BitScan.ls1b(sliderAttackers);
+            long attackerBB = lshift(1L, slider);
+            long inBetweenSquares = InBetweenCache.getInstance().inBetweenSet(slider, kingSq);
+            return intersects(moveTo, inBetweenSquares | attackerBB);
+        }
+        throw new RuntimeException("This shouldn't happen");
+    }
+
+    private boolean isPinned(long king, long pinners, long moveFrom, long moveTo)
     {
         int kingSq = BitScan.ls1b(king);
 
@@ -687,6 +722,11 @@ public class Bitboard
         }
 
         return moves;
+    }
+
+    private long sliders(byte color)
+    {
+        return color == WHITE ? whiteSliders() : blackSliders();
     }
 
     private long whiteSliders()
