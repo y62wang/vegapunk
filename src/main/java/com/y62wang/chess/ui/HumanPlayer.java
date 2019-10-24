@@ -4,15 +4,13 @@ import com.y62wang.chess.Bitboard;
 import com.y62wang.chess.Move;
 import com.y62wang.chess.programs.CommandLineGame;
 
-import java.util.Collection;
 import java.util.Scanner;
-import java.util.Set;
 
 public class HumanPlayer
 {
     public static Bitboard makeHumanMove(Bitboard board, Scanner scanner)
     {
-        Collection<Short> moves = board.legalMoves();
+        short[] moves = board.legalMoves();
         System.out.print("Enter a move: ");
         String line = scanner.nextLine();
         if (line.equals("cccc"))
