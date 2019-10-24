@@ -2,6 +2,7 @@ package com.y62wang.chess.perft;
 
 import com.google.common.base.Stopwatch;
 import com.y62wang.chess.Bitboard;
+import com.y62wang.chess.Move;
 import org.junit.Assert;
 
 import java.util.HashMap;
@@ -19,7 +20,7 @@ public class Perft
         Assert.assertEquals(Long.valueOf(expectedNodeCount), Long.valueOf(result));
     }
 
-    public static void validatedPerfts(Bitboard startingBoard, long[] expectedNodeCountByDepth)
+    public static void validatePositions(Bitboard startingBoard, long[] expectedNodeCountByDepth)
     {
         for (int index = 0; index < expectedNodeCountByDepth.length; index++)
         {
@@ -37,9 +38,41 @@ public class Perft
         return result;
     }
 
+    public static void divide(Bitboard board, int depth)
+    {
+        Map<String, Integer> moveCounter = new HashMap<>();
+        divide(board, depth, moveCounter, null);
+        moveCounter.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
+    }
+
+    public static long divide(Bitboard board, int depth, Map<String, Integer> moveCounter, String rootMove)
+    {
+        if (depth == 1)
+        {
+            return board.legalMoves().size();
+        }
+
+        long result = 0;
+        for (short possibleMove : board.legalMoves())
+        {
+            String moveString = Move.moveString(possibleMove);
+            if (rootMove == null)
+            {
+                moveCounter.put(moveString, 0);
+            }
+            else
+            {
+                moveCounter.put(rootMove, 1 + moveCounter.get(rootMove));
+            }
+            Bitboard nextBoard = board.makeMove(possibleMove);
+            result = result + divide(nextBoard, depth - 1, moveCounter, rootMove == null ? moveString : rootMove);
+        }
+        return result;
+    }
+
     private static long perft(Bitboard startingBoard, int depth)
     {
-        if (depth==1)
+        if (depth == 1)
         {
             return startingBoard.legalMoves().size();
         }
