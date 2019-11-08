@@ -60,7 +60,7 @@ public class Bitboard
     private static final short BK_CASTLE_MASK = 4;
     private static final short BQ_CASTLE_MASK = 8;
     private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
-    public static final int NO_EP_TARGET = -1;
+    public static final int NO_EP_TARGET = 0;
 
     private static List<Bitboard> history = new ArrayList<>();
 
@@ -68,17 +68,17 @@ public class Bitboard
     private short halfMoveClock;
     private Side turn;
     private PieceList pieceList;
-    private int epFileIndex = NO_EP_TARGET;
+    private int epFile = NO_EP_TARGET;
     private short[] potentialMoves;
     private int moveCount;
     private short castleRights;
 
-    public Bitboard(PieceList pieceList, Side turn, int epFileIndex, short castleRights, short halfMoveClock)
+    public Bitboard(PieceList pieceList, Side turn, int epFile, short castleRights, short halfMoveClock)
 
     {
         this.pieceList = pieceList;
         this.turn = turn;
-        this.epFileIndex = epFileIndex;
+        this.epFile = epFile;
         this.castleRights = castleRights;
         this.halfMoveClock = halfMoveClock;
 
@@ -95,7 +95,7 @@ public class Bitboard
     {
         this.pieceList = bb.pieceList.copy();
         this.turn = bb.turn;
-        this.epFileIndex = bb.epFileIndex;
+        this.epFile = bb.epFile;
         this.castleRights = bb.castleRights;
         this.potentialMoves = new short[MAX_MOVES];
         this.moveCount = 0;
@@ -131,7 +131,7 @@ public class Bitboard
         castleRights |= tokens[2].contains("Q") ? (1 << 1) : 0;
         castleRights |= tokens[2].contains("k") ? (1 << 2) : 0;
         castleRights |= tokens[2].contains("q") ? (1 << 3) : 0;
-        epFileIndex = tokens[3].equals("-") ? -1 : Integer.parseInt(tokens[3]) - 1;
+        epFile = tokens[3].equals("-") ? 0 : Integer.parseInt(tokens[3]);
         halfMoveClock = tokens.length > 4 ? Short.parseShort(tokens[4]) : 0;
         fullMoveNumber = tokens.length > 5 ? Short.parseShort(tokens[5]) : 0;
 
@@ -144,7 +144,6 @@ public class Bitboard
         turn = Side.WHITE;
         castleRights = FULL_CASTLE_RIGHT;
         potentialMoves = new short[MAX_MOVES];
-
     }
 
     private void assignPiece(final char[] board)
@@ -222,20 +221,19 @@ public class Bitboard
         return targets;
     }
 
-    public void unmake() {
+    public void unmake()
+    {
         Bitboard bb = history.remove(history.size() - 1);
         this.pieceList = bb.pieceList;
         this.turn = bb.turn;
-        this.epFileIndex = bb.epFileIndex;
+        this.epFile = bb.epFile;
         this.castleRights = bb.castleRights;
     }
-
 
     public void makeMove(short move)
     {
         // Stopwatch started = Stopwatch.createStarted();
         long from = Move.fromSquareBB(move);
-        long to = Move.toSquareBB(move);
         int fromSquare = Move.fromSquare(move);
         int toSquare = Move.toSquare(move);
 
@@ -305,12 +303,12 @@ public class Bitboard
         int newEnPassantTarget = NO_EP_TARGET;
         if (Move.isDoublePawnPush(move))
         {
-            newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
+            newEnPassantTarget = BoardUtil.file(Move.toSquare(move)) + 1;
         }
         // MAKE_MOVE_TIME += started.elapsed().toNanos();
         this.turn = nextTurn();
         this.pieceList = copy;
-        this.epFileIndex = newEnPassantTarget;
+        this.epFile = newEnPassantTarget;
         this.castleRights = updatedCastleRights;
     }
 
@@ -408,7 +406,7 @@ public class Bitboard
 
     private boolean legal(short move, long opponentTargets, long pinners, long attackersToKing, final int attackersCount)
     {
-        long king = pieceList.piecesBB(turn,PieceType.KING);
+        long king = pieceList.piecesBB(turn, PieceType.KING);
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
 
@@ -870,6 +868,7 @@ public class Bitboard
 
     private void addEnPassantForWhite(long occupied)
     {
+        int epFileIndex = epFile - 1;
         if (epFileIndex < 0)
         {
             return;
@@ -897,6 +896,7 @@ public class Bitboard
 
     private void addEnPassantForBlack(long occupied)
     {
+        int epFileIndex = epFile - 1;
         if (epFileIndex < 0)
         {
             return;
@@ -1022,8 +1022,7 @@ public class Bitboard
 
     private short unsetCastleBit(short castleRights, short castleMask)
     {
-        castleRights &= ~castleMask;
-        return castleRights;
+        return castleRights &= ~castleMask;
     }
 
     private long WK()
