@@ -10,6 +10,8 @@ public enum PieceType
     KING(5),
     NO_TYPE(6);
 
+    private static final PieceType[] map = new PieceType[] {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_TYPE};
+
     public static final int NUM_TYPES = 6;
 
     public final int index;
@@ -17,5 +19,10 @@ public enum PieceType
     PieceType(final int index)
     {
         this.index = index;
+    }
+
+    public static PieceType of(int index)
+    {
+        return map[index];
     }
 }

@@ -48,7 +48,8 @@ import static com.y62wang.chess.BoardUtil.squareBB;
 
 public class Bitboard
 {
-    public static final int MAX_MOVES = 256;
+    public static final int MAX_MOVES_PER_POSITION = 256;
+    public static final int MAX_MOVES_PER_GAME = 1000;
     public static long MAKE_MOVE_TIME = 0;
     public static long LEGAL_MOVE_TIME = 0;
 
@@ -59,30 +60,30 @@ public class Bitboard
     private static final short WQ_CASTLE_MASK = 2;
     private static final short BK_CASTLE_MASK = 4;
     private static final short BQ_CASTLE_MASK = 8;
-    private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
+    private static final short FULL_CASTLE_RIGHT = (1 << 4) - 1;
     public static final int NO_EP_TARGET = 0;
 
     private static List<Bitboard> history = new ArrayList<>();
+    private static short[] historyStates = new short[MAX_MOVES_PER_GAME];
+    private static int stateCount = 0;
 
     private short fullMoveNumber;
     private short halfMoveClock;
     private Side turn;
     private PieceList pieceList;
-    private int epFile = NO_EP_TARGET;
     private short[] potentialMoves;
     private int moveCount;
-    private short castleRights;
 
-    public Bitboard(PieceList pieceList, Side turn, int epFile, short castleRights, short halfMoveClock)
+    // history structure: [3 bits: captured piece] [4 bits: EP] [4 bits castle]
+    private int irreversibleState;
+
+    public Bitboard(PieceList pieceList, Side turn, int irreversibleState)
 
     {
         this.pieceList = pieceList;
         this.turn = turn;
-        this.epFile = epFile;
-        this.castleRights = castleRights;
-        this.halfMoveClock = halfMoveClock;
-
-        this.potentialMoves = new short[MAX_MOVES];
+        this.irreversibleState = irreversibleState;
+        this.potentialMoves = new short[MAX_MOVES_PER_POSITION];
         this.moveCount = 0;
     }
 
@@ -95,9 +96,8 @@ public class Bitboard
     {
         this.pieceList = bb.pieceList.copy();
         this.turn = bb.turn;
-        this.epFile = bb.epFile;
-        this.castleRights = bb.castleRights;
-        this.potentialMoves = new short[MAX_MOVES];
+        this.irreversibleState = bb.irreversibleState;
+        this.potentialMoves = new short[MAX_MOVES_PER_POSITION];
         this.moveCount = 0;
     }
 
@@ -127,23 +127,49 @@ public class Bitboard
         }
         assignPiece(CharacterUtilities.toLittleEndianBoard(sb.toString().toCharArray()));
         turn = (tokens[1].equalsIgnoreCase("w") ? Side.WHITE : Side.BLACK);
+
+        short castleRights = 0;
         castleRights |= tokens[2].contains("K") ? 1 : 0;
         castleRights |= tokens[2].contains("Q") ? (1 << 1) : 0;
         castleRights |= tokens[2].contains("k") ? (1 << 2) : 0;
         castleRights |= tokens[2].contains("q") ? (1 << 3) : 0;
-        epFile = tokens[3].equals("-") ? 0 : Integer.parseInt(tokens[3]);
+        int epFile = tokens[3].equals("-") ? 0 : Integer.parseInt(tokens[3]);
+
+        this.irreversibleState = getIrreversibleState(castleRights, epFile, 0);
+
         halfMoveClock = tokens.length > 4 ? Short.parseShort(tokens[4]) : 0;
         fullMoveNumber = tokens.length > 5 ? Short.parseShort(tokens[5]) : 0;
 
-        potentialMoves = new short[MAX_MOVES];
+        potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
     public Bitboard(char[] board)
     {
         assignPiece(board);
         turn = Side.WHITE;
-        castleRights = FULL_CASTLE_RIGHT;
-        potentialMoves = new short[MAX_MOVES];
+        irreversibleState = getIrreversibleState(FULL_CASTLE_RIGHT, NO_EP_TARGET, 0);
+        potentialMoves = new short[MAX_MOVES_PER_POSITION];
+    }
+
+    private int getIrreversibleState(int castleRights, int epFile, int capturedPiece)
+    {
+        return castleRights | epFile << 4 | capturedPiece << 8;
+    }
+
+    private short getCastleRights(int irreversibleState)
+    {
+        return ( short ) (FULL_CASTLE_RIGHT & irreversibleState);
+    }
+
+    private int getEnPassantFile(int irreversibleState)
+    {
+        return (irreversibleState >>> 4) & ((1 << 4) - 1);
+    }
+
+    private PieceType getCapturedPiece(int irreversibleState)
+    {
+        int pieceIndex = (irreversibleState >>> 8) & ((1 << 3) - 1);
+        return PieceType.of(pieceIndex);
     }
 
     private void assignPiece(final char[] board)
@@ -226,8 +252,7 @@ public class Bitboard
         Bitboard bb = history.remove(history.size() - 1);
         this.pieceList = bb.pieceList;
         this.turn = bb.turn;
-        this.epFile = bb.epFile;
-        this.castleRights = bb.castleRights;
+        this.irreversibleState = bb.irreversibleState;
     }
 
     public void makeMove(short move)
@@ -308,13 +333,12 @@ public class Bitboard
         // MAKE_MOVE_TIME += started.elapsed().toNanos();
         this.turn = nextTurn();
         this.pieceList = copy;
-        this.epFile = newEnPassantTarget;
-        this.castleRights = updatedCastleRights;
+        this.irreversibleState = getIrreversibleState(updatedCastleRights, newEnPassantTarget, 0);
     }
 
     private short getUpdatedCastleRights(final long from)
     {
-        short updatedCastleRights = castleRights;
+        short updatedCastleRights = getCastleRights(irreversibleState);
 
         if (intersects(WK(), from))
         {
@@ -868,7 +892,7 @@ public class Bitboard
 
     private void addEnPassantForWhite(long occupied)
     {
-        int epFileIndex = epFile - 1;
+        int epFileIndex = getEnPassantFile(irreversibleState) - 1;
         if (epFileIndex < 0)
         {
             return;
@@ -896,7 +920,7 @@ public class Bitboard
 
     private void addEnPassantForBlack(long occupied)
     {
-        int epFileIndex = epFile - 1;
+        int epFileIndex = getEnPassantFile(irreversibleState) - 1;
         if (epFileIndex < 0)
         {
             return;
@@ -1011,7 +1035,7 @@ public class Bitboard
 
     private boolean canCastle(short castleMask)
     {
-        return (castleRights & castleMask) != 0;
+        return (getCastleRights(irreversibleState) & castleMask) != 0;
     }
 
     private short setCastleBit(short castleRights, short castleMask)
@@ -1092,6 +1116,7 @@ public class Bitboard
 
     public void debug()
     {
-        System.out.println(this.castleRights);
+        System.out.println("state: " + irreversibleState);
+        System.out.println("castle rights: " + getCastleRights(irreversibleState));
     }
 }
