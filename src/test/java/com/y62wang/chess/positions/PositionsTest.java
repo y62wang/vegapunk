@@ -10,8 +10,8 @@ public class PositionsTest
     @Test
     public void testCastlePosition()
     {
-        long[] tests = new long[] {27, 718, 19459};
-        Bitboard board = new Bitboard("r3k2r/p3p2p/8/4B3/4b3/8/P3P2P/R3K2R w KQkq - 3");
+        long[] tests = new long[] {27, 718, 19459, 518277, 14240699};
+        Bitboard board = new Bitboard("r3k2r/p3p2p/8/4B3/4b3/8/P3P2P/R3K2R w KQkq -");
         validatePositions(board, tests);
     }
 

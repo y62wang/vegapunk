@@ -8,6 +8,7 @@ import com.y62wang.chess.enums.Side;
 import com.y62wang.chess.magic.MagicCache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -54,22 +55,12 @@ public class Bitboard
     public static final int BOARD_WIDTH = 8;
     public static final int SIZE = 64;
 
-    private static final int KING = 5;
-    private static final int QUEEN = 4;
-    private static final int ROOK = 3;
-    private static final int BISHOP = 2;
-    private static final int KNIGHT = 1;
-    private static final int PAWN = 0;
-
     private static final short WK_CASTLE_MASK = 1;
     private static final short WQ_CASTLE_MASK = 2;
     private static final short BK_CASTLE_MASK = 4;
     private static final short BQ_CASTLE_MASK = 8;
     private static final short FULL_CASTLE_RIGHT = (1 << 5) - 1;
     public static final int NO_EP_TARGET = -1;
-
-    public static byte WHITE = 0;
-    public static byte BLACK = 1;
 
     private static List<Bitboard> history = new ArrayList<>();
 
@@ -89,13 +80,25 @@ public class Bitboard
         this.turn = turn;
         this.epFileIndex = epFileIndex;
         this.castleRights = castleRights;
-        this.potentialMoves = new short[MAX_MOVES];
         this.halfMoveClock = halfMoveClock;
+
+        this.potentialMoves = new short[MAX_MOVES];
+        this.moveCount = 0;
     }
 
     public Bitboard()
     {
         this(CharacterUtilities.toLittleEndianBoard(NEW_BOARD_CHARS));
+    }
+
+    public Bitboard(final Bitboard bb)
+    {
+        this.pieceList = bb.pieceList.copy();
+        this.turn = bb.turn;
+        this.epFileIndex = bb.epFileIndex;
+        this.castleRights = bb.castleRights;
+        this.potentialMoves = new short[MAX_MOVES];
+        this.moveCount = 0;
     }
 
     public Bitboard(String FEN)
@@ -141,6 +144,7 @@ public class Bitboard
         turn = Side.WHITE;
         castleRights = FULL_CASTLE_RIGHT;
         potentialMoves = new short[MAX_MOVES];
+
     }
 
     private void assignPiece(final char[] board)
@@ -155,7 +159,6 @@ public class Bitboard
         for (int i = 0; i < board.length; i++)
         {
             final char pieceChar = board[i];
-            final long pos = 1L << i;
             Piece piece = Piece.of(pieceChar);
             if (piece != Piece.NO_PIECE)
             {
@@ -219,16 +222,29 @@ public class Bitboard
         return targets;
     }
 
-    public Bitboard makeMove(short move)
+    public void unmake() {
+        Bitboard bb = history.remove(history.size() - 1);
+        this.pieceList = bb.pieceList;
+        this.turn = bb.turn;
+        this.epFileIndex = bb.epFileIndex;
+        this.castleRights = bb.castleRights;
+    }
+
+
+    public void makeMove(short move)
     {
         // Stopwatch started = Stopwatch.createStarted();
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
         int fromSquare = Move.fromSquare(move);
         int toSquare = Move.toSquare(move);
+
         assert (intersects(from, occupied()));
 
-        PieceList copy = pieceList.copy();
+        short updatedCastleRights = getUpdatedCastleRights(from);
+
+        history.add(new Bitboard(this));
+        PieceList copy = this.pieceList;
 
         if (Move.moveCode(move) == Move.QUIET_MOVE || Move.moveCode(move) == Move.CAPTURES || Move.moveCode(move) == Move.DOUBLE_PAWN_PUSH)
         {
@@ -286,6 +302,20 @@ public class Bitboard
             copy.movePiece(fromSquare, toSquare);
         }
 
+        int newEnPassantTarget = NO_EP_TARGET;
+        if (Move.isDoublePawnPush(move))
+        {
+            newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
+        }
+        // MAKE_MOVE_TIME += started.elapsed().toNanos();
+        this.turn = nextTurn();
+        this.pieceList = copy;
+        this.epFileIndex = newEnPassantTarget;
+        this.castleRights = updatedCastleRights;
+    }
+
+    private short getUpdatedCastleRights(final long from)
+    {
         short updatedCastleRights = castleRights;
 
         if (intersects(WK(), from))
@@ -317,41 +347,7 @@ public class Bitboard
         {
             updatedCastleRights = unsetCastleBit(updatedCastleRights, BK_CASTLE_MASK);
         }
-
-        int newEnPassantTarget = NO_EP_TARGET;
-        if (Move.isDoublePawnPush(move))
-        {
-            newEnPassantTarget = BoardUtil.file(Move.toSquare(move));
-        }
-        // MAKE_MOVE_TIME += started.elapsed().toNanos();
-        Bitboard bitboard = new Bitboard(copy, nextTurn(), newEnPassantTarget, updatedCastleRights, halfMoveClock);
-        return bitboard;
-    }
-
-    private void movePiece(long from, long to, long[] board)
-    {
-        for (int pieceIndex = 0; pieceIndex < board.length; pieceIndex++)
-        {
-            long pieces = board[pieceIndex];
-            if (intersects(from, pieces))
-            {
-                board[pieceIndex] = (pieces & ~from) | to;
-                return;
-            }
-        }
-    }
-
-    private void removePiece(long target, long[] board)
-    {
-        for (int pieceIndex = 0; pieceIndex < board.length; pieceIndex++)
-        {
-            long pieces = board[pieceIndex];
-            if (intersects(target, pieces))
-            {
-                board[pieceIndex] = pieces & ~target;
-                return;
-            }
-        }
+        return updatedCastleRights;
     }
 
     public int moveCount()
@@ -363,7 +359,7 @@ public class Bitboard
     {
         moveCount = 0;
         legalMovesBackup();
-        return potentialMoves;
+        return Arrays.copyOf(potentialMoves, moveCount);
     }
 
     private void legalMovesBackup()
@@ -479,11 +475,6 @@ public class Bitboard
         {
             pseudoBlackMoves(opponentPieces, occupied);
         }
-    }
-
-    private long sliders(byte color)
-    {
-        return color == WHITE ? whiteSliders() : blackSliders();
     }
 
     private long whiteSliders()
@@ -794,7 +785,11 @@ public class Bitboard
 
     private void pseudoWhitePawnMoves(long whitePawns, long opponentPieces, long occupied)
     {
-        if (whitePawns == 0) return;
+        if (whitePawns == 0)
+        {
+            return;
+        }
+
         long empty = ~occupied;
 
         long singlePushes = whitePawnSinglePushTargets(whitePawns, empty) & ~BB_RANK_8;
@@ -820,7 +815,10 @@ public class Bitboard
 
     private void pseudoBlackPawnMoves(long blackPawns, long opponentPieces, long occupied)
     {
-        if (blackPawns == 0) return;
+        if (blackPawns == 0)
+        {
+            return;
+        }
 
         long empty = ~occupied;
 
@@ -1018,12 +1016,14 @@ public class Bitboard
 
     private short setCastleBit(short castleRights, short castleMask)
     {
-        return castleRights |= castleMask;
+        castleRights |= castleMask;
+        return castleRights;
     }
 
     private short unsetCastleBit(short castleRights, short castleMask)
     {
-        return castleRights &= ~castleMask;
+        castleRights &= ~castleMask;
+        return castleRights;
     }
 
     private long WK()
@@ -1093,5 +1093,6 @@ public class Bitboard
 
     public void debug()
     {
+        System.out.println(this.castleRights);
     }
 }

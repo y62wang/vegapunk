@@ -155,7 +155,7 @@ public class Move
         return rankChar - '1';
     }
 
-    public static short of(String str)
+    public static short of(String str, short moveType)
     {
         if (str == null || str.length() > 5 || str.length() < 4)
         {
@@ -166,7 +166,12 @@ public class Move
             char promotionType = str.charAt(4);
 
         }
-        return Move.move(boardIndex(str.substring(0, 2)), boardIndex(str.substring(2, 4)), 0);
+        return Move.move(boardIndex(str.substring(0, 2)), boardIndex(str.substring(2, 4)), moveType);
+    }
+
+    public static short of(String str)
+    {
+        return of(str, ( short ) 0);
     }
 
     public static short of(String from, String to)

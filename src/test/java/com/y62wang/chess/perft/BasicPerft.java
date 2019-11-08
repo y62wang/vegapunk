@@ -22,7 +22,6 @@ public class BasicPerft
     {
         long[] tests = new long[] {48, 2039, 97862, 4085603, 193690690};
         Bitboard startingBoard = new Bitboard("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
-        System.out.println(startingBoard);
         validatePositions(startingBoard, tests);
     }
 

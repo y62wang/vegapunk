@@ -8,10 +8,16 @@ public class PerftDebugger
     public static void main(String[] args)
     {
         int depth = Integer.parseInt(args[1]);
-        int runs = 1;
+        int runs = 0;
         if (args.length == 3)
         {
             runs = Integer.parseInt(args[2]);
+        }
+
+        if (runs == 0)
+        {
+            Bitboard board = new Bitboard(args[0]);
+            Perft.divide(board, depth);
         }
 
         for (int i = 0; i < runs; i++)

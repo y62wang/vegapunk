@@ -36,25 +36,25 @@ public class CommandLineGame
 
             if (board.isWhiteTurn())
             {
-                board = HumanPlayer.makeHumanMove(board, scanner);
+                HumanPlayer.makeHumanMove(board, scanner);
                 continue;
             }
             else
             {
-                board = makeComputerMove(board);
+                makeComputerMove(board);
             }
             moveCount++;
         }
     }
 
-    public static Bitboard makeComputerMove(final Bitboard board)
+    public static void makeComputerMove(final Bitboard board)
     {
         Random random = new Random(1L);
         short[] moves = board.legalMoves();
         int moveCount = board.moveCount();
         Short move = moves[random.nextInt(moveCount)];
         System.out.println("Computer made move " + Move.moveString(move));
-        return board.makeMove(move);
+        board.makeMove(move);
     }
 
 }

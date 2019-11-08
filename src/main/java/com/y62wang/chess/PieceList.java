@@ -5,6 +5,7 @@ import com.y62wang.chess.enums.Piece;
 import com.y62wang.chess.enums.PieceType;
 import com.y62wang.chess.enums.Side;
 
+import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.Bitboard.BOARD_WIDTH;
@@ -152,6 +153,10 @@ public class PieceList
                 .forEach(
                         i ->
                         {
+                            if (i % 8 == 0)
+                            {
+                                sb.append(" ").append(1 + i / 8).append("   ");
+                            }
                             Piece piece = this.onSquare(i);
                             if (piece != Piece.NO_PIECE)
                             {
@@ -171,7 +176,23 @@ public class PieceList
         return sb.toString();
     }
 
-    public void debug()
+    @Override
+    public boolean equals(final Object o)
     {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        final PieceList pieceList = ( PieceList ) o;
+        return Arrays.equals(board, pieceList.board) &&
+               Arrays.equals(pieces, pieceList.pieces) &&
+               Arrays.equals(count, pieceList.count);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = Arrays.hashCode(board);
+        result = 31 * result + Arrays.hashCode(pieces);
+        result = 31 * result + Arrays.hashCode(count);
+        return result;
     }
 }

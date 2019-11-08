@@ -31,7 +31,7 @@ public class Perft
     public static long timedPerft(Bitboard board, int depth)
     {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        long result = perft(board, depth);
+        long result = perft(new Bitboard(board), depth);
         stopwatch.stop();
         long millis = stopwatch.elapsed().toMillis();
         System.out.println(String.format("perft(%s) %6s ms %10s nodes %7s nodes/ms", depth, millis, result, millis == 0 ? 0 : result / millis));
@@ -41,8 +41,9 @@ public class Perft
     public static void divide(Bitboard board, int depth)
     {
         Map<String, Integer> moveCounter = new HashMap<>();
-        divide(board, depth, moveCounter, null);
+        long result = divide(board, depth, moveCounter, null);
         moveCounter.forEach((key, val) -> System.out.println(String.format("%s %s", key, val)));
+        System.out.println("Total nodes: " + result);
     }
 
     public static long divide(Bitboard board, int depth, Map<String, Integer> moveCounter, String rootMove)
@@ -50,23 +51,25 @@ public class Perft
         short[] moves = board.legalMoves();
         if (depth == 1)
         {
-            return board.moveCount();
+            if (rootMove != null)
+            {
+                moveCounter.put(rootMove, moves.length + moveCounter.get(rootMove));
+            }
+            return moves.length;
         }
         long result = 0;
         int moveIndex = 0;
-        while (moveIndex < board.moveCount())
+        while (moveIndex < moves.length)
         {
             String moveString = Move.moveString(moves[moveIndex]);
             if (rootMove == null)
             {
                 moveCounter.put(moveString, 0);
             }
-            else
-            {
-                moveCounter.put(rootMove, 1 + moveCounter.get(rootMove));
-            }
-            Bitboard nextBoard = board.makeMove(moves[moveIndex]);
-            result = result + divide(nextBoard, depth - 1, moveCounter, rootMove == null ? moveString : rootMove);
+            board.makeMove(moves[moveIndex]);
+            result = result + divide(board, depth - 1, moveCounter, rootMove == null ? moveString : rootMove);
+            board.unmake();
+            moveIndex++;
         }
         return result;
     }
@@ -76,15 +79,16 @@ public class Perft
         short[] moves = startingBoard.legalMoves();
         if (depth == 1)
         {
-            return startingBoard.moveCount();
+            return moves.length;
         }
 
         long result = 0;
         int moveIndex = 0;
-        while (moveIndex < startingBoard.moveCount())
+        while (moveIndex < moves.length)
         {
-            Bitboard board = startingBoard.makeMove(moves[moveIndex]);
-            result = result + perft(board, depth - 1);
+            startingBoard.makeMove(moves[moveIndex]);
+            result = result + perft(startingBoard, depth - 1);
+            startingBoard.unmake();
             moveIndex++;
         }
         return result;
