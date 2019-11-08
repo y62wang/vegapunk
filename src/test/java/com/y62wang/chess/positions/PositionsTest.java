@@ -70,7 +70,7 @@ public class PositionsTest
         Bitboard board = new Bitboard("3qk3/7b/8/4n3/8/4K3/r7/8 w - -");
         validatePositions(board, tests);
     }
-    
+
     @Test
     public void testBehtingStudy()
     {
