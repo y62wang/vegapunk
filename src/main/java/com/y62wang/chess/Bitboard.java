@@ -7,9 +7,7 @@ import com.y62wang.chess.enums.PieceType;
 import com.y62wang.chess.enums.Side;
 import com.y62wang.chess.magic.MagicCache;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_A1;
@@ -35,8 +33,12 @@ import static com.y62wang.chess.BoardConstants.SQ_A1;
 import static com.y62wang.chess.BoardConstants.SQ_A8;
 import static com.y62wang.chess.BoardConstants.SQ_C1;
 import static com.y62wang.chess.BoardConstants.SQ_C8;
+import static com.y62wang.chess.BoardConstants.SQ_D1;
+import static com.y62wang.chess.BoardConstants.SQ_D8;
 import static com.y62wang.chess.BoardConstants.SQ_E1;
 import static com.y62wang.chess.BoardConstants.SQ_E8;
+import static com.y62wang.chess.BoardConstants.SQ_F1;
+import static com.y62wang.chess.BoardConstants.SQ_F8;
 import static com.y62wang.chess.BoardConstants.SQ_G1;
 import static com.y62wang.chess.BoardConstants.SQ_G8;
 import static com.y62wang.chess.BoardConstants.SQ_H1;
@@ -45,6 +47,8 @@ import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardUtil.square;
 import static com.y62wang.chess.BoardUtil.squareBB;
+import static com.y62wang.chess.enums.Side.BLACK;
+import static com.y62wang.chess.enums.Side.WHITE;
 
 public class Bitboard
 {
@@ -63,8 +67,7 @@ public class Bitboard
     private static final short FULL_CASTLE_RIGHT = (1 << 4) - 1;
     public static final int NO_EP_TARGET = 0;
 
-    private static List<Bitboard> history = new ArrayList<>();
-    private static short[] historyStates = new short[MAX_MOVES_PER_GAME];
+    private static int[] historyStates = new int[MAX_MOVES_PER_GAME];
     private static int stateCount = 0;
 
     private short fullMoveNumber;
@@ -74,7 +77,7 @@ public class Bitboard
     private short[] potentialMoves;
     private int moveCount;
 
-    // history structure: [3 bits: captured piece] [4 bits: EP] [4 bits castle]
+    // history structure: [3 bits: captured piece] [16 bits: move] [4 bits: EP] [4 bits castle]
     private int irreversibleState;
 
     public Bitboard(PieceList pieceList, Side turn, int irreversibleState)
@@ -126,7 +129,7 @@ public class Bitboard
             }
         }
         assignPiece(CharacterUtilities.toLittleEndianBoard(sb.toString().toCharArray()));
-        turn = (tokens[1].equalsIgnoreCase("w") ? Side.WHITE : Side.BLACK);
+        turn = (tokens[1].equalsIgnoreCase("w") ? WHITE : Side.BLACK);
 
         short castleRights = 0;
         castleRights |= tokens[2].contains("K") ? 1 : 0;
@@ -146,14 +149,28 @@ public class Bitboard
     public Bitboard(char[] board)
     {
         assignPiece(board);
-        turn = Side.WHITE;
+        turn = WHITE;
         irreversibleState = getIrreversibleState(FULL_CASTLE_RIGHT, NO_EP_TARGET, 0);
         potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
+    private int updateIrreversibleState(int irreversibleMove, int capturedPiece, short move)
+    {
+        return getIrreversibleState(getCastleRights(irreversibleState),
+                                    getEnPassantFile(irreversibleState),
+                                    capturedPiece,
+                                    move);
+    }
+
     private int getIrreversibleState(int castleRights, int epFile, int capturedPiece)
     {
-        return castleRights | epFile << 4 | capturedPiece << 8;
+        return castleRights | epFile << 4 | capturedPiece << 24;
+    }
+
+    private int getIrreversibleState(int castleRights, int epFile, int capturedPiece, short move)
+    {
+        int result = castleRights | epFile << 4 | (Short.toUnsignedInt(move)) << 8 | capturedPiece << 24;
+        return result;
     }
 
     private short getCastleRights(int irreversibleState)
@@ -166,9 +183,14 @@ public class Bitboard
         return (irreversibleState >>> 4) & ((1 << 4) - 1);
     }
 
+    private short getMove(int irreversibleState)
+    {
+        return ( short ) ((irreversibleState >>> 8) & ((1 << 16) - 1));
+    }
+
     private PieceType getCapturedPiece(int irreversibleState)
     {
-        int pieceIndex = (irreversibleState >>> 8) & ((1 << 3) - 1);
+        int pieceIndex = (irreversibleState >>> 24) & ((1 << 3) - 1);
         return PieceType.of(pieceIndex);
     }
 
@@ -200,12 +222,12 @@ public class Bitboard
 
     private Side nextTurn()
     {
-        return turn == Side.WHITE ? Side.BLACK : Side.WHITE;
+        return turn == WHITE ? Side.BLACK : WHITE;
     }
 
     public boolean isWhiteTurn()
     {
-        return turn == Side.WHITE;
+        return turn == WHITE;
     }
 
     public long occupied()
@@ -249,10 +271,58 @@ public class Bitboard
 
     public void unmake()
     {
-        Bitboard bb = history.remove(history.size() - 1);
-        this.pieceList = bb.pieceList;
-        this.turn = bb.turn;
-        this.irreversibleState = bb.irreversibleState;
+        int irreversibleState = historyStates[--stateCount];
+        short move = getMove(irreversibleState);
+
+        int fromSq = Move.fromSquare(move);
+        int toSq = Move.toSquare(move);
+        pieceList.movePiece(toSq, fromSq);
+
+        if (Move.moveCode(move) == Move.CAPTURES)
+        {
+            pieceList.addPiece(Piece.of(this.turn, getCapturedPiece(irreversibleState)), toSq);
+        }
+        else if (Move.isPromoCapture(move))
+        {
+            pieceList.removePiece(fromSq);
+            pieceList.addPiece(Piece.of(turn.flip(), PieceType.PAWN), fromSq);
+            pieceList.addPiece(Piece.of(this.turn, getCapturedPiece(irreversibleState)), toSq);
+        }
+        else if (Move.isPromotion(move))
+        {
+            pieceList.removePiece(fromSq);
+            pieceList.addPiece(Piece.of(this.turn.flip(), PieceType.PAWN), fromSq);
+        }
+        else if (Move.isKingCastle(move))
+        {
+            if (turn == BLACK)
+            {
+                pieceList.movePiece(SQ_F1, SQ_H1);
+            }
+            else
+            {
+                pieceList.movePiece(SQ_F8, SQ_H8);
+            }
+        }
+        else if (Move.isQueenCastle(move))
+        {
+            if (turn == BLACK)
+            {
+                pieceList.movePiece(SQ_D1, SQ_A1);
+            }
+            else
+            {
+                pieceList.movePiece(SQ_D8, SQ_A8);
+            }
+        }
+        else if (Move.isEnpassant(move))
+        {
+            int moveDirection = turn == BLACK ? Direction.SOUTH : Direction.NORTH;
+            pieceList.addPiece(Piece.of(this.turn, PieceType.PAWN), toSq + moveDirection);
+        }
+
+        this.turn = this.turn.flip();
+        this.irreversibleState = irreversibleState;
     }
 
     public void makeMove(short move)
@@ -266,8 +336,11 @@ public class Bitboard
 
         short updatedCastleRights = getUpdatedCastleRights(from);
 
-        history.add(new Bitboard(this));
         PieceList copy = this.pieceList;
+        Piece capturedPiece = pieceList.onSquare(toSquare);
+        historyStates[stateCount++] = getIrreversibleState(getCastleRights(irreversibleState),
+                                                           getEnPassantFile(irreversibleState),
+                                                           capturedPiece.type.index, move);
 
         if (Move.moveCode(move) == Move.QUIET_MOVE || Move.moveCode(move) == Move.CAPTURES || Move.moveCode(move) == Move.DOUBLE_PAWN_PUSH)
         {
@@ -314,7 +387,7 @@ public class Bitboard
         }
         else if (Move.isEnpassant(move))
         {
-            if (turn == Side.WHITE)
+            if (turn == WHITE)
             {
                 copy.removePiece(toSquare + Direction.SOUTH);
             }
@@ -333,7 +406,7 @@ public class Bitboard
         // MAKE_MOVE_TIME += started.elapsed().toNanos();
         this.turn = nextTurn();
         this.pieceList = copy;
-        this.irreversibleState = getIrreversibleState(updatedCastleRights, newEnPassantTarget, 0);
+        this.irreversibleState = getIrreversibleState(updatedCastleRights, newEnPassantTarget, 0, ( short ) 0);
     }
 
     private short getUpdatedCastleRights(final long from)
@@ -387,14 +460,14 @@ public class Bitboard
     private void legalMovesBackup()
     {
         long occupied = occupied();
-        long ownPieces = turn == Side.WHITE ? whitePieces() : blackPieces();
+        long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
         long opponentPieces = occupied & ~ownPieces;
         long myKing = pieceList.piecesBB(turn, PieceType.KING);
         long attackers = opponentPieces & attackersTo(myKing, occupied);
         int attackersCount = PopulationCount.popCount(attackers);
-        long opponentTargets = turn == Side.WHITE ? blackTargets(occupied) : whiteTargets(occupied);
+        long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
         long pinners = getPinners(occupied, ownPieces, myKing);
-        generateSudoMoves();
+        generatePseudoMoves();
 
         int writeIndex = 0, readIndex = 0;
 
@@ -485,11 +558,11 @@ public class Bitboard
         return false;
     }
 
-    private void generateSudoMoves()
+    private void generatePseudoMoves()
     {
-        long opponentPieces = turn == Side.WHITE ? blackPieces() : whitePieces();
+        long opponentPieces = turn == WHITE ? blackPieces() : whitePieces();
         long occupied = occupied();
-        if (turn == Side.WHITE)
+        if (turn == WHITE)
         {
             pseudoWhiteMoves(opponentPieces, occupied);
         }
@@ -499,15 +572,6 @@ public class Bitboard
         }
     }
 
-    private long whiteSliders()
-    {
-        return WB() | WQ() | WR();
-    }
-
-    private long blackSliders()
-    {
-        return BB() | BQ() | BR();
-    }
 
     private long rookQueenPinners(long king, long ownPieces, long occupied, long opponentRQ)
     {
@@ -1118,5 +1182,9 @@ public class Bitboard
     {
         System.out.println("state: " + irreversibleState);
         System.out.println("castle rights: " + getCastleRights(irreversibleState));
+    }
+
+    public int identify() {
+        return pieceList.hashCode();
     }
 }
