@@ -12,6 +12,8 @@ import java.util.stream.IntStream;
 
 import static com.y62wang.chess.BoardConstants.BB_A1;
 import static com.y62wang.chess.BoardConstants.BB_A8;
+import static com.y62wang.chess.BoardConstants.BB_E1;
+import static com.y62wang.chess.BoardConstants.BB_E8;
 import static com.y62wang.chess.BoardConstants.BB_FILE_A;
 import static com.y62wang.chess.BoardConstants.BB_FILE_H;
 import static com.y62wang.chess.BoardConstants.BB_H1;
@@ -154,14 +156,6 @@ public class Bitboard
         potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
-    private int updateIrreversibleState(int irreversibleMove, int capturedPiece, short move)
-    {
-        return getIrreversibleState(getCastleRights(irreversibleState),
-                                    getEnPassantFile(irreversibleState),
-                                    capturedPiece,
-                                    move);
-    }
-
     private int getIrreversibleState(int castleRights, int epFile, int capturedPiece)
     {
         return castleRights | epFile << 4 | capturedPiece << 24;
@@ -169,8 +163,7 @@ public class Bitboard
 
     private int getIrreversibleState(int castleRights, int epFile, int capturedPiece, short move)
     {
-        int result = castleRights | epFile << 4 | (Short.toUnsignedInt(move)) << 8 | capturedPiece << 24;
-        return result;
+        return castleRights | epFile << 4 | (Short.toUnsignedInt(move)) << 8 | capturedPiece << 24;
     }
 
     private short getCastleRights(int irreversibleState)
@@ -232,7 +225,7 @@ public class Bitboard
 
     public long occupied()
     {
-        return WP() | WN() | WB() | WR() | WK() | WQ() | BP() | BN() | BB() | BR() | BK() | BQ();
+        return pieceList.occupied();
     }
 
     private long whitePieces()
@@ -247,7 +240,7 @@ public class Bitboard
 
     private long whiteTargets(long occupied)
     {
-        long targets = kingTargets(WK())
+        long targets = singleKingTargets(WK())
                        | queenTargets(WQ(), occupied & ~BK())
                        | knightTargets(WN())
                        | rookTargets(WR(), occupied & ~BK())
@@ -259,7 +252,7 @@ public class Bitboard
 
     private long blackTargets(long occupied)
     {
-        long targets = kingTargets(BK())
+        long targets = singleKingTargets(BK())
                        | queenTargets(BQ(), occupied & ~WK())
                        | knightTargets(BN())
                        | rookTargets(BR(), occupied & ~WK())
@@ -278,7 +271,11 @@ public class Bitboard
         int toSq = Move.toSquare(move);
         pieceList.movePiece(toSq, fromSq);
 
-        if (Move.moveCode(move) == Move.CAPTURES)
+        int moveCode = Move.moveCode(move);
+        if (moveCode == Move.QUIET_MOVE || moveCode == Move.DOUBLE_PAWN_PUSH)
+        {
+        }
+        else if (moveCode == Move.CAPTURES)
         {
             pieceList.addPiece(Piece.of(this.turn, getCapturedPiece(irreversibleState)), toSq);
         }
@@ -403,7 +400,6 @@ public class Bitboard
         {
             newEnPassantTarget = BoardUtil.file(Move.toSquare(move)) + 1;
         }
-        // MAKE_MOVE_TIME += started.elapsed().toNanos();
         this.turn = nextTurn();
         this.pieceList = copy;
         this.irreversibleState = getIrreversibleState(updatedCastleRights, newEnPassantTarget, 0, ( short ) 0);
@@ -463,18 +459,19 @@ public class Bitboard
         long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
         long opponentPieces = occupied & ~ownPieces;
         long myKing = pieceList.piecesBB(turn, PieceType.KING);
-        long attackers = opponentPieces & attackersTo(myKing, occupied);
-        int attackersCount = PopulationCount.popCount(attackers);
+        long kingAttackers = opponentPieces & attackersTo(myKing, occupied);
+        int attackersCount = PopulationCount.popCount(kingAttackers);
         long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
         long pinners = getPinners(occupied, ownPieces, myKing);
+
         generatePseudoMoves();
 
         int writeIndex = 0, readIndex = 0;
-
         int newMoveCount = 0;
+
         while (readIndex < moveCount)
         {
-            if (legal(potentialMoves[readIndex], opponentTargets, pinners, attackers, attackersCount))
+            if (legal(potentialMoves[readIndex], opponentTargets, pinners, kingAttackers, attackersCount))
             {
                 if (readIndex != writeIndex)
                 {
@@ -521,12 +518,11 @@ public class Bitboard
         }
 
         int kingSq = BitScan.ls1b(king);
-        return !isPinned(kingSq, pinners, from, to) && canPreventKingAttack(kingSq, attackersToKing, to, attackersCount);
+        return !isMovePinned(kingSq, pinners, from, to) && canPreventKingAttack(kingSq, attackersToKing, to, attackersCount);
     }
 
     private boolean canPreventKingAttack(int kingSq, long sliderAttackers, long moveTo, final int attackersCount)
     {
-
         if (attackersCount == 0)
         {
             return true;
@@ -537,17 +533,17 @@ public class Bitboard
         }
 
         int slider = BitScan.ls1b(sliderAttackers);
-        long attackerBB = lshift(1L, slider);
+        long attackerBB = leftShift(1L, slider);
         long inBetweenSquares = InBetweenCache.getInstance().inBetweenSet(slider, kingSq);
         return intersects(moveTo, inBetweenSquares | attackerBB);
     }
 
-    private boolean isPinned(int kingSq, long pinners, long moveFrom, long moveTo)
+    private boolean isMovePinned(int kingSq, long pinners, long moveFrom, long moveTo)
     {
         while (pinners != 0)
         {
             int pinner = BitScan.ls1b(pinners);
-            long pinnerBB = lshift(1L, pinner);
+            long pinnerBB = leftShift(1L, pinner);
             long inBetweenSquares = InBetweenCache.getInstance().inBetweenSet(pinner, kingSq);
             if (intersects(inBetweenSquares, moveFrom))
             {
@@ -571,7 +567,6 @@ public class Bitboard
             pseudoBlackMoves(opponentPieces, occupied);
         }
     }
-
 
     private long rookQueenPinners(long king, long ownPieces, long occupied, long opponentRQ)
     {
@@ -601,7 +596,7 @@ public class Bitboard
 
     private long attackersTo(long squareBB, long occupied)
     {
-        return (kingTargets(squareBB) & (BK() | WK()))
+        return (singleKingTargets(squareBB) & (BK() | WK()))
                | (knightTargets(squareBB) & (BN() | WN()))
                | (bishopTargets(squareBB, occupied) & (BQ() | WQ() | BB() | WB()))
                | (rookTargets(squareBB, occupied) & (BQ() | WQ() | BR() | WR()))
@@ -615,11 +610,16 @@ public class Bitboard
         while (knights != 0)
         {
             int ls1b = BitScan.ls1b(knights);
-            knights &= ~lshift(1L, ls1b);
+            knights &= ~leftShift(1L, ls1b);
             targets |= Knight.targets(ls1b);
         }
 
         return targets;
+    }
+
+    private long singleKingTargets(long king)
+    {
+        return King.targets(BitScan.ls1b(king));
     }
 
     private long kingTargets(long kings)
@@ -628,7 +628,7 @@ public class Bitboard
         while (kings != 0)
         {
             int ls1b = BitScan.ls1b(kings);
-            kings &= ~lshift(1L, ls1b);
+            kings &= ~leftShift(1L, ls1b);
             targets |= King.targets(ls1b);
         }
         return targets;
@@ -640,7 +640,7 @@ public class Bitboard
         while (rooks != 0)
         {
             int ls1b = BitScan.ls1b(rooks);
-            rooks &= ~lshift(1L, ls1b);
+            rooks &= (rooks - 1);
             attacks |= MagicCache.getInstance().rookAttacks(ls1b, occupied);
         }
         return attacks;
@@ -652,7 +652,7 @@ public class Bitboard
         while (bishops != 0)
         {
             int ls1b = BitScan.ls1b(bishops);
-            bishops &= ~lshift(1L, ls1b);
+            bishops &= (bishops - 1);
             attacks |= MagicCache.getInstance().bishopAttacks(ls1b, occupied);
         }
         return attacks;
@@ -733,7 +733,7 @@ public class Bitboard
         while (kingBB != 0)
         {
             int fromSq = BitScan.ls1b(kingBB);
-            kingBB &= ~lshift(1L, fromSq);
+            kingBB &= ~leftShift(1L, fromSq);
             long attackSet = King.targets(fromSq);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -751,7 +751,7 @@ public class Bitboard
         while (knightsBB != 0)
         {
             int fromSq = BitScan.ls1b(knightsBB);
-            knightsBB &= ~lshift(1L, fromSq);
+            knightsBB &= (knightsBB-1);
             long attackSet = Knight.targets(fromSq);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -769,7 +769,7 @@ public class Bitboard
         while (rooks != 0)
         {
             int rook = BitScan.ls1b(rooks);
-            rooks &= ~lshift(1L, rook);
+            rooks &= ~leftShift(1L, rook);
             long attackSet = MagicCache.getInstance().rookAttacks(rook, occupied);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -787,7 +787,7 @@ public class Bitboard
         while (bishops != 0)
         {
             int rook = BitScan.ls1b(bishops);
-            bishops &= ~lshift(1L, rook);
+            bishops &= (bishops-1);
             long attackSet = MagicCache.getInstance().bishopAttacks(rook, occupied);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -805,7 +805,7 @@ public class Bitboard
         while (queens != 0)
         {
             int queen = BitScan.ls1b(queens);
-            queens &= ~lshift(1L, queen);
+            queens &= (queens-1);
 
             // rook attacks
             long rookAttackSets = MagicCache.getInstance().rookAttacks(queen, occupied);
@@ -834,16 +834,16 @@ public class Bitboard
     private void pseudoWhiteCastles(long occupied)
     {
         if (((W_KING_CASTLE_CLEAR_MASK) & occupied) == 0
-            && (WK() & squareBB(SQ_E1)) != 0
-            && (WR() & squareBB(SQ_H1)) != 0
+            && (WK() & BB_E1) != 0
+            && (WR() & BB_H1) != 0
             && canCastle(WK_CASTLE_MASK))
         {
             addMove(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
         }
 
         if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
-            && (WK() & squareBB(SQ_E1)) != 0
-            && (WR() & squareBB(SQ_A1)) != 0
+            && (WK() & BB_E1) != 0
+            && (WR() & BB_A1) != 0
             && canCastle(WQ_CASTLE_MASK))
         {
             addMove(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
@@ -853,16 +853,16 @@ public class Bitboard
     private void pseudoBlackCastles(long occupied)
     {
         if (((B_KING_CASTLE_CLEAR_MASK) & occupied) == 0
-            && (BK() & squareBB(SQ_E8)) != 0
-            && (BR() & squareBB(SQ_H8)) != 0
+            && (BK() & BB_E8) != 0
+            && (BR() & BB_H8) != 0
             && this.canCastle(BK_CASTLE_MASK))
         {
             addMove(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
         }
 
         if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
-            && (BK() & squareBB(SQ_E8)) != 0
-            && (BR() & squareBB(SQ_A8)) != 0
+            && (BK() & BB_E8) != 0
+            && (BR() & BB_A8) != 0
             && this.canCastle(BQ_CASTLE_MASK))
         {
             addMove(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
@@ -1042,54 +1042,54 @@ public class Bitboard
         }
     }
 
-    private long lshift(long x, int s)
+    private long leftShift(long x, int s)
     {
         return x << s;
     }
 
-    private long rshift(long x, int s)
+    private long rightShift(long x, int s)
     {
         return x >>> s;
     }
 
     private long northOne(long bb)
     {
-        return lshift(bb, BOARD_DIM);
+        return leftShift(bb, BOARD_DIM);
     }
 
     private long southOne(long bb)
     {
-        return rshift(bb, BOARD_DIM);
+        return rightShift(bb, BOARD_DIM);
     }
 
     private long eastOne(long bb)
     {
-        return lshift(bb, 1) & ~BB_FILE_A;
+        return leftShift(bb, 1) & ~BB_FILE_A;
     }
 
     private long westOne(long bb)
     {
-        return rshift(bb, 1) & ~BB_FILE_H;
+        return rightShift(bb, 1) & ~BB_FILE_H;
     }
 
     private long NE1(long bb)
     {
-        return lshift(bb, 9) & ~BB_FILE_A;
+        return leftShift(bb, 9) & ~BB_FILE_A;
     }
 
     private long NW1(long bb)
     {
-        return lshift(bb, 7) & ~BB_FILE_H;
+        return leftShift(bb, 7) & ~BB_FILE_H;
     }
 
     private long SE1(long bb)
     {
-        return rshift(bb, 7) & ~BB_FILE_A;
+        return rightShift(bb, 7) & ~BB_FILE_A;
     }
 
     private long SW1(long bb)
     {
-        return rshift(bb, 9) & ~BB_FILE_H;
+        return rightShift(bb, 9) & ~BB_FILE_H;
     }
 
     private boolean intersects(long a, long b)
@@ -1184,7 +1184,8 @@ public class Bitboard
         System.out.println("castle rights: " + getCastleRights(irreversibleState));
     }
 
-    public int identify() {
+    public int identify()
+    {
         return pieceList.hashCode();
     }
 }

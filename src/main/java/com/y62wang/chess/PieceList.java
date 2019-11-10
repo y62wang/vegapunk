@@ -19,11 +19,13 @@ public class PieceList
 
     private Piece[] board;
     private int[][][] pieces;
+    private long[][] piecesBB;
     private int[][] count;
 
     public PieceList()
     {
         pieces = new int[NUM_SIDES][NUM_TYPES][MAX_PIECES];
+        piecesBB = new long[NUM_SIDES][NUM_TYPES];
         count = new int[NUM_SIDES][NUM_TYPES];
         board = new Piece[SIZE];
     }
@@ -38,6 +40,7 @@ public class PieceList
         int tail = count[piece.side.index][piece.type.index]++;
         pieces[piece.side.index][piece.type.index][tail] = square;
         board[square] = piece;
+        piecesBB[piece.side.index][piece.type.index] |= BoardUtil.squareBB(square);
     }
 
     private void removePiece(Side side, PieceType type, int square)
@@ -59,6 +62,7 @@ public class PieceList
         list[size] = -1;
         count[side.index][type.index]--;
         board[square] = null;
+        piecesBB[side.index][type.index] = piecesBB[side.index][type.index] & ~BoardUtil.squareBB(square);
     }
 
     public Piece removePiece(int square)
@@ -92,10 +96,7 @@ public class PieceList
         {
             for (int type = 0; type < pieces[side].length; type++)
             {
-                for (int i = 0; i < count[side][type]; i++)
-                {
-                    occupied |= 1L << pieces[side][type][i];
-                }
+                occupied |= piecesBB[side][type];
             }
         }
 
@@ -122,12 +123,7 @@ public class PieceList
 
     public long piecesBB(Piece piece)
     {
-        long piecesBB = 0L;
-        for (int i = 0; i < count[piece.side.index][piece.type.index]; i++)
-        {
-            piecesBB |= 1L << pieces[piece.side.index][piece.type.index][i];
-        }
-        return piecesBB;
+        return piecesBB[piece.side.index][piece.type.index];
     }
 
     public PieceList copy()
