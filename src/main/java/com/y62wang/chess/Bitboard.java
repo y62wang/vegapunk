@@ -23,7 +23,9 @@ import static com.y62wang.chess.BoardConstants.BB_RANK_4;
 import static com.y62wang.chess.BoardConstants.BB_RANK_5;
 import static com.y62wang.chess.BoardConstants.BB_RANK_8;
 import static com.y62wang.chess.BoardConstants.BOARD_DIM;
+import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_ATTACK_MASK;
 import static com.y62wang.chess.BoardConstants.B_KING_CASTLE_CLEAR_MASK;
+import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_ATTACK_MASK;
 import static com.y62wang.chess.BoardConstants.B_QUEEN_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardConstants.CASTLE_ATTACK_MASKS;
 import static com.y62wang.chess.BoardConstants.NEW_BOARD_CHARS;
@@ -45,10 +47,13 @@ import static com.y62wang.chess.BoardConstants.SQ_G1;
 import static com.y62wang.chess.BoardConstants.SQ_G8;
 import static com.y62wang.chess.BoardConstants.SQ_H1;
 import static com.y62wang.chess.BoardConstants.SQ_H8;
+import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_ATTACK_MASK;
 import static com.y62wang.chess.BoardConstants.W_KING_CASTLE_CLEAR_MASK;
+import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_ATTACK_MASK;
 import static com.y62wang.chess.BoardConstants.W_QUEEN_CASTLE_CLEAR_MASK;
 import static com.y62wang.chess.BoardUtil.square;
 import static com.y62wang.chess.BoardUtil.squareBB;
+import static com.y62wang.chess.enums.PieceType.KING;
 import static com.y62wang.chess.enums.Side.BLACK;
 import static com.y62wang.chess.enums.Side.WHITE;
 
@@ -403,6 +408,7 @@ public class Bitboard
         this.turn = nextTurn();
         this.pieceList = copy;
         this.irreversibleState = getIrreversibleState(updatedCastleRights, newEnPassantTarget, 0, ( short ) 0);
+
     }
 
     private short getUpdatedCastleRights(final long from)
@@ -449,16 +455,31 @@ public class Bitboard
     public short[] legalMoves()
     {
         moveCount = 0;
-        legalMovesBackup();
+        legalMoves2();
         return Arrays.copyOf(potentialMoves, moveCount);
     }
 
-    private void legalMovesBackup()
+    private void legalMoves2()
     {
         long occupied = occupied();
         long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
         long opponentPieces = occupied & ~ownPieces;
-        long myKing = pieceList.piecesBB(turn, PieceType.KING);
+        if (turn == WHITE)
+        {
+            legalWhiteMoves(opponentPieces, occupied);
+        }
+        else
+        {
+            legalBlackMoves(opponentPieces, occupied);
+        }
+    }
+
+    private void legalMovesWithPseudoMoveRemoval()
+    {
+        long myKing = pieceList.piecesBB(turn, KING);
+        long occupied = occupied();
+        long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
+        long opponentPieces = occupied & ~ownPieces;
         long kingAttackers = opponentPieces & attackersTo(myKing, occupied);
         int attackersCount = PopulationCount.popCount(kingAttackers);
         long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
@@ -498,9 +519,22 @@ public class Bitboard
         return bqPinners | rqPinners;
     }
 
+    public boolean isLegal(short move)
+    {
+        long occupied = occupied();
+        long ownPieces = turn == WHITE ? whitePieces() : blackPieces();
+        long opponentPieces = occupied & ~ownPieces;
+        long myKing = pieceList.piecesBB(turn, KING);
+        long kingAttackers = opponentPieces & attackersTo(myKing, occupied);
+        int attackersCount = PopulationCount.popCount(kingAttackers);
+        long opponentTargets = turn == WHITE ? blackTargets(occupied) : whiteTargets(occupied);
+        long pinners = getPinners(occupied, ownPieces, myKing);
+        return legal(move, opponentTargets, pinners, kingAttackers, attackersCount);
+    }
+
     private boolean legal(short move, long opponentTargets, long pinners, long attackersToKing, final int attackersCount)
     {
-        long king = pieceList.piecesBB(turn, PieceType.KING);
+        long king = pieceList.piecesBB(turn, KING);
         long from = Move.fromSquareBB(move);
         long to = Move.toSquareBB(move);
 
@@ -728,6 +762,79 @@ public class Bitboard
         pseudoBlackCastles(occupied);
     }
 
+    private void legalWhiteMoves(long opponentPieces, long occupied)
+    {
+        long ownPieces = whitePieces();
+        long myKing = pieceList.piecesBB(WHITE, KING);
+        int kingSq = BitScan.ls1b(myKing);
+        long kingAttackers = opponentPieces & attackersTo(myKing, occupied);
+        int attackersCount = PopulationCount.popCount(kingAttackers);
+        long opponentTargets = blackTargets(occupied);
+        long pinners = getPinners(occupied, ownPieces, myKing);
+
+        if (attackersCount == 2)
+        {
+            legalKingMoves(WK(), opponentPieces, occupied, opponentTargets);
+        }
+        else
+        {
+            legalKingMoves(WK(), opponentPieces, occupied, opponentTargets);
+            legalBishopMoves(WB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalRookMoves(WR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalQueenMoves(WQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalKnightMoves(WN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalWhitePawnMoves(WP(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalWhiteCastles(occupied, opponentTargets);
+        }
+    }
+
+    private void legalBlackMoves(long opponentPieces, long occupied)
+    {
+        long ownPieces = blackPieces();
+        long myKing = pieceList.piecesBB(BLACK, KING);
+        int kingSq = BitScan.ls1b(myKing);
+        long kingAttackers = opponentPieces & attackersTo(myKing, occupied);
+        int attackersCount = PopulationCount.popCount(kingAttackers);
+        long opponentTargets = whiteTargets(occupied);
+        long pinners = getPinners(occupied, ownPieces, myKing);
+
+        if (attackersCount == 2)
+        {
+            legalKingMoves(BK(), opponentPieces, occupied, opponentTargets);
+        }
+        else
+        {
+            legalKingMoves(BK(), opponentPieces, occupied, opponentTargets);
+            legalBishopMoves(BB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalRookMoves(BR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalQueenMoves(BQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalKnightMoves(BN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalBlackPawnMoves(BP(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalBlackCastles(occupied, opponentTargets);
+        }
+    }
+
+    private void legalKingMoves(long kingBB, long opponentPieces, long occupied, long opponentAttacks)
+    {
+        while (kingBB != 0)
+        {
+            int fromSq = BitScan.ls1b(kingBB);
+            kingBB &= ~leftShift(1L, fromSq);
+            long attackSet = King.targets(fromSq);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                if (!intersects(squareBB(toSquare), opponentAttacks))
+                {
+                    short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                    addMove(Move.move(fromSq, toSquare, moveType));
+                }
+            }
+        }
+    }
+
     private void pseudoKingMoves(long kingBB, long opponentPieces, long occupied)
     {
         while (kingBB != 0)
@@ -746,12 +853,35 @@ public class Bitboard
         }
     }
 
+    private void legalKnightMoves(long knightsBB, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (knightsBB != 0)
+        {
+            int fromSq = BitScan.ls1b(knightsBB);
+            knightsBB &= (knightsBB - 1);
+            long attackSet = Knight.targets(fromSq);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                if (isMovePinned(kingSq, pinners, squareBB(fromSq), squareBB(toSquare))
+                    || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+                {
+                    continue;
+                }
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                addMove(Move.move(fromSq, toSquare, moveType));
+            }
+        }
+    }
+
     private void pseudoKnightMoves(long knightsBB, long opponentPieces, long occupied)
     {
         while (knightsBB != 0)
         {
             int fromSq = BitScan.ls1b(knightsBB);
-            knightsBB &= (knightsBB-1);
+            knightsBB &= (knightsBB - 1);
             long attackSet = Knight.targets(fromSq);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
@@ -760,6 +890,29 @@ public class Bitboard
                 attackSet &= ~squareBB(toSquare);
                 short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
                 addMove(Move.move(fromSq, toSquare, moveType));
+            }
+        }
+    }
+
+    private void legalRookMoves(long rooks, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (rooks != 0)
+        {
+            int rook = BitScan.ls1b(rooks);
+            rooks &= ~leftShift(1L, rook);
+            long attackSet = MagicCache.getInstance().rookAttacks(rook, occupied);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                if (isMovePinned(kingSq, pinners, squareBB(rook), squareBB(toSquare))
+                    || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+                {
+                    continue;
+                }
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                addMove(Move.move(rook, toSquare, moveType));
             }
         }
     }
@@ -782,20 +935,85 @@ public class Bitboard
         }
     }
 
+    private void legalBishopMoves(long bishops, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (bishops != 0)
+        {
+            int bishop = BitScan.ls1b(bishops);
+            bishops &= (bishops - 1);
+            long attackSet = MagicCache.getInstance().bishopAttacks(bishop, occupied);
+            attackSet &= ~occupied | opponentPieces;
+            while (attackSet != 0)
+            {
+                int toSquare = BitScan.ls1b(attackSet);
+                attackSet &= ~squareBB(toSquare);
+                if (isMovePinned(kingSq, pinners, squareBB(bishop), squareBB(toSquare))
+                    || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+                {
+                    continue;
+                }
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                addMove(Move.move(bishop, toSquare, moveType));
+            }
+        }
+    }
+
     private void pseudoBishopMoves(long bishops, long opponentPieces, long occupied)
     {
         while (bishops != 0)
         {
-            int rook = BitScan.ls1b(bishops);
-            bishops &= (bishops-1);
-            long attackSet = MagicCache.getInstance().bishopAttacks(rook, occupied);
+            int bishop = BitScan.ls1b(bishops);
+            bishops &= (bishops - 1);
+            long attackSet = MagicCache.getInstance().bishopAttacks(bishop, occupied);
             attackSet &= ~occupied | opponentPieces;
             while (attackSet != 0)
             {
                 int toSquare = BitScan.ls1b(attackSet);
                 attackSet &= ~squareBB(toSquare);
                 short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
-                addMove(Move.move(rook, toSquare, moveType));
+                addMove(Move.move(bishop, toSquare, moveType));
+            }
+        }
+    }
+
+    private void legalQueenMoves(long queens, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (queens != 0)
+        {
+            int queen = BitScan.ls1b(queens);
+            queens &= (queens - 1);
+
+            // rook attacks
+            long rookAttackSets = MagicCache.getInstance().rookAttacks(queen, occupied);
+            rookAttackSets &= ~occupied | opponentPieces;
+            while (rookAttackSets != 0)
+            {
+                int toSquare = BitScan.ls1b(rookAttackSets);
+                rookAttackSets &= ~squareBB(toSquare);
+                if (isMovePinned(kingSq, pinners, squareBB(queen), squareBB(toSquare))
+                    || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+                {
+                    continue;
+                }
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                addMove(Move.move(queen, toSquare, moveType));
+            }
+
+            // bishop attacks
+            long bishopAttackSets = MagicCache.getInstance().bishopAttacks(queen, occupied);
+            bishopAttackSets &= ~occupied | opponentPieces;
+            while (bishopAttackSets != 0)
+            {
+                int toSquare = BitScan.ls1b(bishopAttackSets);
+                bishopAttackSets &= ~squareBB(toSquare);
+                if (isMovePinned(kingSq, pinners, squareBB(queen), squareBB(toSquare))
+                    || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+                {
+                    continue;
+                }
+
+                short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
+                addMove(Move.move(queen, toSquare, moveType));
             }
         }
     }
@@ -805,7 +1023,7 @@ public class Bitboard
         while (queens != 0)
         {
             int queen = BitScan.ls1b(queens);
-            queens &= (queens-1);
+            queens &= (queens - 1);
 
             // rook attacks
             long rookAttackSets = MagicCache.getInstance().rookAttacks(queen, occupied);
@@ -828,6 +1046,58 @@ public class Bitboard
                 short moveType = intersects(squareBB(toSquare), opponentPieces) ? Move.CAPTURES : Move.QUIET_MOVE;
                 addMove(Move.move(queen, toSquare, moveType));
             }
+        }
+    }
+
+    private void legalWhiteCastles(long occupied, long opponentAttacks)
+    {
+        if (intersects(WK(), opponentAttacks))
+        {
+            return;
+        }
+
+        if (((W_KING_CASTLE_CLEAR_MASK) & occupied) == 0
+            && (W_KING_CASTLE_ATTACK_MASK & opponentAttacks) == 0
+            && (WK() & BB_E1) != 0
+            && (WR() & BB_H1) != 0
+            && canCastle(WK_CASTLE_MASK))
+        {
+            addMove(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
+        }
+
+        if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
+            && (W_QUEEN_CASTLE_ATTACK_MASK & opponentAttacks) == 0
+            && (WK() & BB_E1) != 0
+            && (WR() & BB_A1) != 0
+            && canCastle(WQ_CASTLE_MASK))
+        {
+            addMove(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
+        }
+    }
+
+    private void legalBlackCastles(long occupied, long opponentAttacks)
+    {
+        if (intersects(BK(), opponentAttacks))
+        {
+            return;
+        }
+
+        if (((B_KING_CASTLE_CLEAR_MASK) & occupied) == 0
+            && (B_KING_CASTLE_ATTACK_MASK & opponentAttacks) == 0
+            && (BK() & BB_E8) != 0
+            && (BR() & BB_H8) != 0
+            && this.canCastle(BK_CASTLE_MASK))
+        {
+            addMove(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
+        }
+
+        if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
+            && (B_QUEEN_CASTLE_ATTACK_MASK & opponentAttacks) == 0
+            && (BK() & BB_E8) != 0
+            && (BR() & BB_A8) != 0
+            && this.canCastle(BQ_CASTLE_MASK))
+        {
+            addMove(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
         }
     }
 
@@ -869,6 +1139,36 @@ public class Bitboard
         }
     }
 
+    private void legalWhitePawnMoves(long whitePawns, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        if (whitePawns == 0)
+        {
+            return;
+        }
+
+        long empty = ~occupied;
+
+        long singlePushes = whitePawnSinglePushTargets(whitePawns, empty) & ~BB_RANK_8;
+        long doublePushes = whitePawnDoublePushTargets(whitePawns, empty);
+        long attacksNE = whitePawnsEastAttackTargets(whitePawns) & opponentPieces & ~BB_RANK_8;
+        long attacksNW = whitePawnsWestAttackTargets(whitePawns) & opponentPieces & ~BB_RANK_8;
+
+        long promotionsPush = whitePawnSinglePushTargets(whitePawns, empty) & BB_RANK_8;
+        long promotionAttacksNE = whitePawnsEastAttackTargets(whitePawns) & opponentPieces & BB_RANK_8;
+        long promotionAttacksNW = whitePawnsWestAttackTargets(whitePawns) & opponentPieces & BB_RANK_8;
+
+        addLegalPawnMoves(singlePushes, Direction.NORTH, Move.QUIET_MOVE, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(doublePushes, Direction.NORTH * 2, Move.DOUBLE_PAWN_PUSH, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(attacksNE, Direction.NORTH_EAST, Move.CAPTURES, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(attacksNW, Direction.NORTH_WEST, Move.CAPTURES, kingSq, kingAttackers, kingAttackersCount, pinners);
+
+        addLegalPawnPromotions(promotionsPush, Direction.NORTH, false, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnPromotions(promotionAttacksNE, Direction.NORTH_EAST, true, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true, kingSq, kingAttackers, kingAttackersCount, pinners);
+
+        addLegalEnPassantForWhite(occupied, kingSq, kingAttackers, kingAttackersCount, pinners);
+    }
+
     private void pseudoWhitePawnMoves(long whitePawns, long opponentPieces, long occupied)
     {
         if (whitePawns == 0)
@@ -897,6 +1197,36 @@ public class Bitboard
         addPawnPromotions(promotionAttacksNW, Direction.NORTH_WEST, true);
 
         addEnPassantForWhite(occupied);
+    }
+
+    private void legalBlackPawnMoves(long blackPawns, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        if (blackPawns == 0)
+        {
+            return;
+        }
+
+        long empty = ~occupied;
+
+        long singlePushes = blackPawnSinglePushTargets(blackPawns, empty) & ~BB_RANK_1;
+        long doublePushes = blackPawnDoublePushTargets(blackPawns, empty);
+        long attacksSE = blackPawnsEastAttackTargets(blackPawns) & opponentPieces & ~BB_RANK_1;
+        long attacksSW = blackPawnsWestAttackTargets(blackPawns) & opponentPieces & ~BB_RANK_1;
+
+        long promotionsPush = blackPawnSinglePushTargets(blackPawns, empty) & BB_RANK_1;
+        long promotionAttacksSE = blackPawnsEastAttackTargets(blackPawns) & opponentPieces & BB_RANK_1;
+        long promotionAttacksSW = blackPawnsWestAttackTargets(blackPawns) & opponentPieces & BB_RANK_1;
+
+        addLegalPawnMoves(singlePushes, Direction.SOUTH, Move.QUIET_MOVE, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(doublePushes, Direction.SOUTH * 2, Move.DOUBLE_PAWN_PUSH, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(attacksSE, Direction.SOUTH_EAST, Move.CAPTURES, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnMoves(attacksSW, Direction.SOUTH_WEST, Move.CAPTURES, kingSq, kingAttackers, kingAttackersCount, pinners);
+
+        addLegalPawnPromotions(promotionsPush, Direction.SOUTH, false, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnPromotions(promotionAttacksSE, Direction.SOUTH_EAST, true, kingSq, kingAttackers, kingAttackersCount, pinners);
+        addLegalPawnPromotions(promotionAttacksSW, Direction.SOUTH_WEST, true, kingSq, kingAttackers, kingAttackersCount, pinners);
+
+        addEnPassantForBlack(occupied, kingSq, kingAttackers, kingAttackersCount, pinners);
     }
 
     private void pseudoBlackPawnMoves(long blackPawns, long opponentPieces, long occupied)
@@ -954,6 +1284,74 @@ public class Bitboard
         }
     }
 
+    private void addLegalPawnPromotions(long targetSquares, int shift, boolean isCapture, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (targetSquares != 0)
+        {
+            int toSquare = BitScan.ls1b(targetSquares);
+            int fromSquare = toSquare - shift;
+            targetSquares &= ~squareBB(toSquare);
+
+            if (isMovePinned(kingSq, pinners, squareBB(fromSquare), squareBB(toSquare))
+                || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+            {
+                continue;
+            }
+
+            if (isCapture)
+            {
+                addMove(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMO_CAPTURE));
+                addMove(Move.move(fromSquare, toSquare, Move.BISHOP_PROMO_CAPTURE));
+                addMove(Move.move(fromSquare, toSquare, Move.ROOK_PROMO_CAPTURE));
+                addMove(Move.move(fromSquare, toSquare, Move.QUEEN_PROMO_CAPTURE));
+            }
+            else
+            {
+                addMove(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMOTION));
+                addMove(Move.move(fromSquare, toSquare, Move.BISHOP_PROMOTION));
+                addMove(Move.move(fromSquare, toSquare, Move.ROOK_PROMOTION));
+                addMove(Move.move(fromSquare, toSquare, Move.QUEEN_PROMOTION));
+            }
+        }
+    }
+
+    private void addLegalEnPassantForWhite(long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        int epFileIndex = getEnPassantFile(irreversibleState) - 1;
+        if (epFileIndex < 0)
+        {
+            return;
+        }
+
+        long targetPawnBB = squareBB(epFileIndex, RANK_5);
+        long targetSquareBB = squareBB(epFileIndex, RANK_6);
+        int targetSquare = square(epFileIndex, RANK_6);
+
+        if (!intersects(targetPawnBB, BP()) || intersects(targetSquareBB, occupied))
+        {
+            return;
+        }
+
+        if (intersects(eastOne(WP()), targetPawnBB))
+        {
+            if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.SOUTH_WEST), squareBB(targetSquare))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+            {
+                addMove(Move.move(targetSquare + Direction.SOUTH_WEST, targetSquare, Move.EP_CAPTURE));
+            }
+        }
+
+        if (intersects(westOne(WP()), targetPawnBB))
+        {
+            if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.SOUTH_EAST), squareBB(targetSquare))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+            {
+                addMove(Move.move(targetSquare + Direction.SOUTH_EAST, targetSquare, Move.EP_CAPTURE));
+
+            }
+        }
+    }
+
     private void addEnPassantForWhite(long occupied)
     {
         int epFileIndex = getEnPassantFile(irreversibleState) - 1;
@@ -982,6 +1380,42 @@ public class Bitboard
         }
     }
 
+    private void addEnPassantForBlack(long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        int epFileIndex = getEnPassantFile(irreversibleState) - 1;
+        if (epFileIndex < 0)
+        {
+            return;
+        }
+
+        long targetPawnBB = squareBB(epFileIndex, RANK_4);
+        long targetSquareBB = squareBB(epFileIndex, RANK_3);
+        int targetSquare = square(epFileIndex, RANK_3);
+
+        if (!intersects(targetPawnBB, WP()) || intersects(targetSquareBB, occupied))
+        {
+            return;
+        }
+
+        if (intersects(eastOne(BP()), targetPawnBB))
+        {
+            if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.NORTH_WEST), squareBB(targetSquare))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+            {
+                addMove(Move.move(targetSquare + Direction.NORTH_WEST, targetSquare, Move.EP_CAPTURE));
+            }
+        }
+
+        if (intersects(westOne(BP()), targetPawnBB))
+        {
+            if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.NORTH_EAST), squareBB(targetSquare))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+            {
+                addMove(Move.move(targetSquare + Direction.NORTH_EAST, targetSquare, Move.EP_CAPTURE));
+            }
+        }
+    }
+
     private void addEnPassantForBlack(long occupied)
     {
         int epFileIndex = getEnPassantFile(irreversibleState) - 1;
@@ -1007,6 +1441,44 @@ public class Bitboard
         if (intersects(westOne(BP()), targetPawnBB))
         {
             addMove(Move.move(targetSquare + Direction.NORTH_EAST, targetSquare, Move.EP_CAPTURE));
+        }
+    }
+
+    private void addLegalPawnMoves(long targetSquares, int shift, short moveType, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
+    {
+        while (targetSquares != 0)
+        {
+            int toSquare = BitScan.ls1b(targetSquares);
+            int fromSquare = toSquare - shift;
+            targetSquares &= ~squareBB(toSquare);
+
+            if (isMovePinned(kingSq, pinners, squareBB(fromSquare), squareBB(toSquare))
+                || !canPreventKingAttack(kingSq, kingAttackers, squareBB(toSquare), kingAttackersCount))
+            {
+                continue;
+            }
+
+            if (Move.isPromotion(moveType))
+            {
+                if (Move.isCapture(moveType))
+                {
+                    addMove(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMO_CAPTURE));
+                    addMove(Move.move(fromSquare, toSquare, Move.BISHOP_PROMO_CAPTURE));
+                    addMove(Move.move(fromSquare, toSquare, Move.ROOK_PROMO_CAPTURE));
+                    addMove(Move.move(fromSquare, toSquare, Move.QUEEN_PROMO_CAPTURE));
+                }
+                else
+                {
+                    addMove(Move.move(fromSquare, toSquare, Move.KNIGHT_PROMOTION));
+                    addMove(Move.move(fromSquare, toSquare, Move.BISHOP_PROMOTION));
+                    addMove(Move.move(fromSquare, toSquare, Move.ROOK_PROMOTION));
+                    addMove(Move.move(fromSquare, toSquare, Move.QUEEN_PROMOTION));
+                }
+            }
+            else
+            {
+                addMove(Move.move(fromSquare, toSquare, moveType));
+            }
         }
     }
 
