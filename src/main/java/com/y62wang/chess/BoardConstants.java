@@ -195,6 +195,11 @@ public class BoardConstants
 
     public static final long OUTER_BOARD = BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8;
     public static final long INNER_BOARD = ~(BoardConstants.FILE_H | BoardConstants.FILE_A | BoardConstants.RANK_1 | BoardConstants.RANK_8);
+    public static final long CENTER_BOARD =
+            ~(BoardConstants.FILE_H | BoardConstants.FILE_G
+              | BoardConstants.FILE_A | BoardConstants.FILE_B
+              | BoardConstants.RANK_1 | BoardConstants.RANK_2
+              | BoardConstants.RANK_7 | BoardConstants.RANK_8);
 
     public static final long W_KING_CASTLE_ATTACK_MASK = position(SQ_F1, SQ_G1);
     public static final long W_QUEEN_CASTLE_ATTACK_MASK = position(SQ_C1, SQ_D1);

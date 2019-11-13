@@ -60,7 +60,7 @@ import static com.y62wang.chess.enums.Side.WHITE;
 public class Bitboard
 {
     public static final int MAX_MOVES_PER_POSITION = 256;
-    public static final int MAX_MOVES_PER_GAME = 1000;
+    public static final int MAX_MOVES_PER_GAME = 10000;
     public static long MAKE_MOVE_TIME = 0;
     public static long LEGAL_MOVE_TIME = 0;
 
@@ -161,6 +161,9 @@ public class Bitboard
         potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
+    public Side getTurn() {
+        return this.turn;
+    }
     private int getIrreversibleState(int castleRights, int epFile, int capturedPiece)
     {
         return castleRights | epFile << 4 | capturedPiece << 24;
@@ -169,6 +172,16 @@ public class Bitboard
     private int getIrreversibleState(int castleRights, int epFile, int capturedPiece, short move)
     {
         return castleRights | epFile << 4 | (Short.toUnsignedInt(move)) << 8 | capturedPiece << 24;
+    }
+
+    public int getCastleRights()
+    {
+        return getCastleRights(this.irreversibleState);
+    }
+
+    public int getEPFile()
+    {
+        return this.getEnPassantFile(irreversibleState);
     }
 
     private short getCastleRights(int irreversibleState)
@@ -241,6 +254,16 @@ public class Bitboard
     private long blackPieces()
     {
         return BP() | BN() | BB() | BR() | BK() | BQ();
+    }
+
+    public long targets(Side side)
+    {
+        return side == WHITE ? whiteTargets(occupied()) : blackTargets(occupied());
+    }
+
+    public long pieces(Side side)
+    {
+        return pieceList.sideBB(side);
     }
 
     private long whiteTargets(long occupied)
@@ -778,13 +801,13 @@ public class Bitboard
         }
         else
         {
-            legalKingMoves(WK(), opponentPieces, occupied, opponentTargets);
-            legalBishopMoves(WB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalRookMoves(WR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalQueenMoves(WQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalKnightMoves(WN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
             legalWhitePawnMoves(WP(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalQueenMoves(WQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalRookMoves(WR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalBishopMoves(WB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalKnightMoves(WN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
             legalWhiteCastles(occupied, opponentTargets);
+            legalKingMoves(WK(), opponentPieces, occupied, opponentTargets);
         }
     }
 
@@ -804,13 +827,14 @@ public class Bitboard
         }
         else
         {
-            legalKingMoves(BK(), opponentPieces, occupied, opponentTargets);
-            legalBishopMoves(BB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalRookMoves(BR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalQueenMoves(BQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
-            legalKnightMoves(BN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
             legalBlackPawnMoves(BP(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalQueenMoves(BQ(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalRookMoves(BR(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalBishopMoves(BB(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
+            legalKnightMoves(BN(), opponentPieces, occupied, kingSq, kingAttackers, attackersCount, pinners);
             legalBlackCastles(occupied, opponentTargets);
+            legalKingMoves(BK(), opponentPieces, occupied, opponentTargets);
+
         }
     }
 
@@ -1060,7 +1084,7 @@ public class Bitboard
             && (W_KING_CASTLE_ATTACK_MASK & opponentAttacks) == 0
             && (WK() & BB_E1) != 0
             && (WR() & BB_H1) != 0
-            && canCastle(WK_CASTLE_MASK))
+            && canKingSideCastleWhite())
         {
             addMove(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
         }
@@ -1069,10 +1093,20 @@ public class Bitboard
             && (W_QUEEN_CASTLE_ATTACK_MASK & opponentAttacks) == 0
             && (WK() & BB_E1) != 0
             && (WR() & BB_A1) != 0
-            && canCastle(WQ_CASTLE_MASK))
+            && canQueenSideCastleWhite())
         {
             addMove(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
         }
+    }
+
+    public boolean canQueenSideCastleWhite()
+    {
+        return canCastle(WQ_CASTLE_MASK);
+    }
+
+    public boolean canKingSideCastleWhite()
+    {
+        return canCastle(WK_CASTLE_MASK);
     }
 
     private void legalBlackCastles(long occupied, long opponentAttacks)
@@ -1086,7 +1120,7 @@ public class Bitboard
             && (B_KING_CASTLE_ATTACK_MASK & opponentAttacks) == 0
             && (BK() & BB_E8) != 0
             && (BR() & BB_H8) != 0
-            && this.canCastle(BK_CASTLE_MASK))
+            && canKingSideCastleBlack())
         {
             addMove(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
         }
@@ -1095,10 +1129,15 @@ public class Bitboard
             && (B_QUEEN_CASTLE_ATTACK_MASK & opponentAttacks) == 0
             && (BK() & BB_E8) != 0
             && (BR() & BB_A8) != 0
-            && this.canCastle(BQ_CASTLE_MASK))
+            && canQueenSideCastleBlack())
         {
             addMove(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
         }
+    }
+
+    public boolean canQueenSideCastleBlack()
+    {
+        return this.canCastle(BQ_CASTLE_MASK);
     }
 
     private void pseudoWhiteCastles(long occupied)
@@ -1106,7 +1145,7 @@ public class Bitboard
         if (((W_KING_CASTLE_CLEAR_MASK) & occupied) == 0
             && (WK() & BB_E1) != 0
             && (WR() & BB_H1) != 0
-            && canCastle(WK_CASTLE_MASK))
+            && canKingSideCastleWhite())
         {
             addMove(Move.move(SQ_E1, SQ_G1, Move.KING_CASTLE));
         }
@@ -1114,7 +1153,7 @@ public class Bitboard
         if ((W_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
             && (WK() & BB_E1) != 0
             && (WR() & BB_A1) != 0
-            && canCastle(WQ_CASTLE_MASK))
+            && canQueenSideCastleWhite())
         {
             addMove(Move.move(SQ_E1, SQ_C1, Move.QUEEN_CASTLE));
         }
@@ -1125,7 +1164,7 @@ public class Bitboard
         if (((B_KING_CASTLE_CLEAR_MASK) & occupied) == 0
             && (BK() & BB_E8) != 0
             && (BR() & BB_H8) != 0
-            && this.canCastle(BK_CASTLE_MASK))
+            && canKingSideCastleBlack())
         {
             addMove(Move.move(SQ_E8, SQ_G8, Move.KING_CASTLE));
         }
@@ -1133,10 +1172,15 @@ public class Bitboard
         if ((B_QUEEN_CASTLE_CLEAR_MASK & occupied) == 0
             && (BK() & BB_E8) != 0
             && (BR() & BB_A8) != 0
-            && this.canCastle(BQ_CASTLE_MASK))
+            && canQueenSideCastleBlack())
         {
             addMove(Move.move(SQ_E8, SQ_C8, Move.QUEEN_CASTLE));
         }
+    }
+
+    public boolean canKingSideCastleBlack()
+    {
+        return this.canCastle(BK_CASTLE_MASK);
     }
 
     private void legalWhitePawnMoves(long whitePawns, long opponentPieces, long occupied, int kingSq, long kingAttackers, int kingAttackersCount, long pinners)
@@ -1659,5 +1703,10 @@ public class Bitboard
     public int identify()
     {
         return pieceList.hashCode();
+    }
+
+    public PieceList getPieceList()
+    {
+        return this.pieceList;
     }
 }

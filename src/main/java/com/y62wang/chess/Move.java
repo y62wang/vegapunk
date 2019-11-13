@@ -150,7 +150,7 @@ public class Move
         return (fileChar - 'a');
     }
 
-    private static int rankToIndex(char rankChar)
+    public static int rankToIndex(char rankChar)
     {
         return rankChar - '1';
     }

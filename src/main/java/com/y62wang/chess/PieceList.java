@@ -160,7 +160,7 @@ public class PieceList
                             }
                             else
                             {
-                                sb.append('.');
+                                sb.append((((i/8) %2 + (i % 8) %2) %2) == 0 ? "." : "_");
                             }
                             sb.append("  ");
                             if ((i + 1) % BOARD_WIDTH == 0)
