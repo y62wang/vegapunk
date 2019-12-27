@@ -5,6 +5,7 @@ import com.y62wang.chess.Bitboard;
 import java.util.Scanner;
 
 import static com.y62wang.chess.ui.ComputerPlayer.makeComputerMove;
+import static com.y62wang.chess.ui.HumanPlayer.makeHumanMove;
 
 public class CommandLineGame
 {
@@ -35,8 +36,7 @@ public class CommandLineGame
 
             if (board.isWhiteTurn())
             {
-                makeComputerMove(board);
-                //HumanPlayer.makeHumanMove(board, scanner);
+                makeHumanMove(board, scanner);
                 continue;
             }
             else
@@ -46,7 +46,4 @@ public class CommandLineGame
             moveCount++;
         }
     }
-
-
-
 }

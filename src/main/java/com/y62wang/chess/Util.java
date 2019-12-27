@@ -40,13 +40,4 @@ public class Util
         }
         System.out.println();
     }
-
-    public static void printMoves2(Collection<Short> moves)
-    {
-        for (final Short move : moves)
-        {
-            System.out.print(Move.moveString(move) + "(" + move + ") ");
-        }
-        System.out.println();
-    }
 }

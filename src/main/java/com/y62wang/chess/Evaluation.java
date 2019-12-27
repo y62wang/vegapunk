@@ -20,21 +20,12 @@ public class Evaluation
 
     public static double evaluate(Bitboard bb)
     {
-        double val = evaluate(bb, WHITE) - evaluate(bb, BLACK);
-//        System.out.println(bb);
-//        System.out.println(val);
-//        System.out.println("===========================");
-        return val;
+        return evaluate(bb, WHITE) - evaluate(bb, BLACK);
     }
 
     public static double evaluateAbsolute(Bitboard bb)
     {
-        double val = evaluate(bb, bb.getTurn()) - evaluate(bb, bb.getTurn().flip());
-//        System.out.println(bb);
-//        System.out.println(val);
-//        System.out.println("===========================");
-
-        return val;
+        return evaluate(bb, bb.getTurn()) - evaluate(bb, bb.getTurn().flip());
     }
 
     private static double evaluate(Bitboard bb, Side side)
@@ -65,8 +56,8 @@ public class Evaluation
             pawnScores += PopulationCount.popCount(p & BoardConstants.RANK_3) * 0.02;
             pawnScores += PopulationCount.popCount(p & (BoardConstants.RANK_4 | BoardConstants.RANK_5)) * 0.01;
         }
+
         long targets = bb.targets(side);
-        long opponentTargets = bb.targets(side.flip());
         double v = PopulationCount.popCount(k) * 200
                    + PopulationCount.popCount(q) * 9
                    + PopulationCount.popCount(r) * 5
@@ -76,13 +67,6 @@ public class Evaluation
                    + PopulationCount.popCount((targets)) * 0.05
                    + pawnScores
                    + moveCount * 0.1;
-//                   + PopulationCount.popCount((targets & bb.getPieceList().piecesBB(Piece.of(side.flip(), KING)))) * 0.1
-//                   - PopulationCount.popCount(opponentTargets & bb.getPieceList().piecesBB(side, QUEEN)) * 0.2
-//                   - PopulationCount.popCount(opponentTargets & bb.getPieceList().piecesBB(side, KING)) * 0.3
-//                   + PopulationCount.popCount(BoardConstants.CENTER_BOARD & targets) * 0.05;
-//                   + PopulationCount.popCount(targets & bb.pieces(side.flip())) * 0.01;
-//                   - PopulationCount.popCount(~targets & bb.pieces(side)) * 0.11;
-        // + random.nextDouble() / 1000000;
         return v;
     }
 

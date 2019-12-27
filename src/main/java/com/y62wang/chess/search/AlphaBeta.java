@@ -44,12 +44,8 @@ public class AlphaBeta
 
     public static Node search(Bitboard board, int depth)
     {
-        // return minimax(board, depth, board.isWhiteTurn(), null);
         tt.cleanup();
         Node result = alphabeta(board, depth, NEGATIVE_INFINITY, POSITIVE_INFINITY, board.isWhiteTurn(), null);
-        // Node result = negamax(board, depth, NEGATIVE_INFINITY, POSITIVE_INFINITY, null);
-//        System.out.println(Move.moveString(result.move) + " " + result.score);
-        // Node result = board.isWhiteTurn() ? firstLevelSearchMax(board, depth) : firstLevelSearchMin(board,depth);
         return result;
     }
 

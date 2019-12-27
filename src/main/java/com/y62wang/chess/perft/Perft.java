@@ -12,11 +12,10 @@ public class Perft
 {
     public static void singlePerft(Bitboard board, int depth, long expectedNodeCount)
     {
-        Map<Integer, Long> map = new HashMap<>();
         Map<String, Integer> roots = new HashMap<>();
         long result = timedPerft(board, depth);
         System.out.println(roots.keySet() + " " + roots.values());
-        System.out.println("==============================================================");
+        System.out.println("################################################################################");
         Assert.assertEquals(Long.valueOf(expectedNodeCount), Long.valueOf(result));
     }
 

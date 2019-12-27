@@ -4,6 +4,7 @@ import com.y62wang.chess.bits.Endianess;
 import com.y62wang.chess.enums.Piece;
 import com.y62wang.chess.enums.PieceType;
 import com.y62wang.chess.enums.Side;
+import com.y62wang.chess.ui.UnicodeChessPieceUtil;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -156,7 +157,7 @@ public class PieceList
                             Piece piece = this.onSquare(i);
                             if (piece != Piece.NO_PIECE)
                             {
-                                sb.append(piece.pieceName());
+                                sb.append(UnicodeChessPieceUtil.toUnicode(piece.pieceName()));
                             }
                             else
                             {
