@@ -1379,7 +1379,8 @@ public class Bitboard
         if (intersects(eastOne(WP()), targetPawnBB))
         {
             if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.SOUTH_WEST), squareBB(targetSquare))
-                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount))
+                  || kingAttackers == targetPawnBB) // single pawn attacker, which can be removed
             {
                 addMove(Move.move(targetSquare + Direction.SOUTH_WEST, targetSquare, Move.EP_CAPTURE));
             }
@@ -1388,7 +1389,8 @@ public class Bitboard
         if (intersects(westOne(WP()), targetPawnBB))
         {
             if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.SOUTH_EAST), squareBB(targetSquare))
-                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount))
+                  || kingAttackers == targetPawnBB) // single pawn attacker, which can be removed
             {
                 addMove(Move.move(targetSquare + Direction.SOUTH_EAST, targetSquare, Move.EP_CAPTURE));
 
@@ -1444,7 +1446,8 @@ public class Bitboard
         if (intersects(eastOne(BP()), targetPawnBB))
         {
             if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.NORTH_WEST), squareBB(targetSquare))
-                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount))
+                  || kingAttackers == targetPawnBB) // single pawn attacker, which can be removed
             {
                 addMove(Move.move(targetSquare + Direction.NORTH_WEST, targetSquare, Move.EP_CAPTURE));
             }
@@ -1453,7 +1456,8 @@ public class Bitboard
         if (intersects(westOne(BP()), targetPawnBB))
         {
             if (!(isMovePinned(kingSq, pinners, squareBB(targetSquare + Direction.NORTH_EAST), squareBB(targetSquare))
-                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount)))
+                  || !canPreventKingAttack(kingSq, kingAttackers, squareBB(targetSquare), kingAttackersCount))
+                  || kingAttackers == targetPawnBB) // single pawn attacker, which can be removed
             {
                 addMove(Move.move(targetSquare + Direction.NORTH_EAST, targetSquare, Move.EP_CAPTURE));
             }

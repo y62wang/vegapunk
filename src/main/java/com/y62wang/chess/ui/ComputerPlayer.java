@@ -15,7 +15,7 @@ public class ComputerPlayer
     {
         Stopwatch start = Stopwatch.createStarted();
         Random random = new Random(1L);
-        Node node = AlphaBeta.search(board, 6 - (board.isWhiteTurn() ? 0 : 1));
+        Node node = AlphaBeta.search(board, 4 - (board.isWhiteTurn() ? 0 : 1));
         if(node == null) {
             System.out.println(board);
             System.out.println("GAME OVER");

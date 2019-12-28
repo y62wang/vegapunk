@@ -94,4 +94,12 @@ public class PositionsTest
         Bitboard board = new Bitboard("5B2/6P1/1p6/8/1N6/kP6/2K5/8 w - -");
         validatePositions(board, tests);
     }
+
+    @Test
+    public void testPawnDoublePushCheckCanBeCapturedByEP()
+    {
+        long[] tests = new long[] {7, 57, 397};
+        Bitboard board = new Bitboard("4k3/2p5/8/3P4/3K4/8/8/8 b - - 0 1");
+        validatePositions(board, tests);
+    }
 }
