@@ -1,17 +1,20 @@
 package com.y62wang.chess.programs;
 
 import com.y62wang.chess.Bitboard;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.Scanner;
 
 import static com.y62wang.chess.ui.ComputerPlayer.makeComputerMove;
 import static com.y62wang.chess.ui.HumanPlayer.makeHumanMove;
 
+@Log4j2
 public class CommandLineGame
 {
 
     public static void main(String[] args)
     {
+
         Scanner scanner = new Scanner(System.in);
         Bitboard board = new Bitboard();
         if (args.length == 1)

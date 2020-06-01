@@ -1,0 +1,3 @@
+#!/bin/zsh
+
+java -jar /Users/y62wang/workplace/vegapunk/build/libs/vegapunk-uci-1.0-SNAPSHOT.jar
