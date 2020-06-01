@@ -33,7 +33,7 @@ task debugger(type: Jar) {
     manifest {
         attributes 'Implementation-Title': 'Gradle Jar File Example',
                 'Implementation-Version': version,
-                'Main-Class': 'com.y62wang.chess.programs.PerftDebugger'
+                'Main-Class': 'com.y62wang.game.ui.programs.PerftDebugger'
     }
     baseName = project.name + '-debugger'
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -44,7 +44,7 @@ task game(type: Jar) {
     manifest {
         attributes 'Implementation-Title': 'Gradle Jar File Example',
                 'Implementation-Version': version,
-                'Main-Class': 'com.y62wang.chess.programs.CommandLineGame'
+                'Main-Class': 'com.y62wang.game.ui.programs.CommandLineGame'
     }
     baseName = project.name + '-game'
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -56,7 +56,7 @@ task uci(type: Jar) {
     manifest {
         attributes 'Implementation-Title': 'Gradle Jar File Example',
                 'Implementation-Version': version,
-                'Main-Class': 'com.y62wang.chess.programs.NaiveUCI'
+                'Main-Class': 'com.y62wang.game.ui.programs.NaiveUCI'
     }
     baseName = project.name + '-uci'
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
