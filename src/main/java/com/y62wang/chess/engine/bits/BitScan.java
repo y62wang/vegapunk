@@ -1,5 +1,7 @@
 package com.y62wang.chess.engine.bits;
 
+import com.google.common.base.Verify;
+
 public class BitScan
 {
     /**
@@ -10,7 +12,7 @@ public class BitScan
      */
     public static int ls1b(long number)
     {
-        assert (number != 0);
+        Verify.verify(number != 0, "0 does not have LS1B");
         return Long.numberOfTrailingZeros(number);
     }
 }

@@ -1,4 +1,4 @@
-package com.y62wang.chess.engine;
+package com.y62wang.chess.engine.util;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class UnicodeChessPieceUtil
 {
-    private static final Map<Character, String> pieceToUnicodeMap = ImmutableMap.<Character, String>builder()
+    private static Map<Character, String> pieceToUnicodeMap = ImmutableMap.<Character, String>builder()
             .put('K', "♔")
             .put('Q', "♕")
             .put('R', "♖")

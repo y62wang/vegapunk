@@ -2,13 +2,13 @@ package com.y62wang.chess.engine.bits;
 
 public class PopulationCount
 {
-    private static final int NUM_CACHED_BITS = 8;
-    private static final int CACHE_SIZE = ( int ) Math.pow(2, 8);
-    private static final long MASK_8 = BitMask.getMask(8);
-    private static final long MASK_16 = BitMask.getMask(16);
+    private static int NUM_CACHED_BITS = 8;
+    private static int CACHE_SIZE = ( int ) Math.pow(2, 8);
+    private static long MASK_8 = BitMask.getMask(8);
+    private static long MASK_16 = BitMask.getMask(16);
 
-    private static final int[] popLookupTable8Bits = new int[CACHE_SIZE];
-    private static final int[] popLookupTable16Bits = new int[CACHE_SIZE*CACHE_SIZE];
+    private static int[] popLookupTable8Bits = new int[CACHE_SIZE];
+    private static int[] popLookupTable16Bits = new int[CACHE_SIZE*CACHE_SIZE];
 
     static
     {

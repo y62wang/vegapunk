@@ -4,7 +4,7 @@ import static com.y62wang.chess.engine.BoardConstants.BOARD_SIZE;
 
 public class Knight
 {
-    private static final long[] ATTACKS = new long[BOARD_SIZE];
+    private static long[] ATTACKS = new long[BOARD_SIZE];
 
     static
     {

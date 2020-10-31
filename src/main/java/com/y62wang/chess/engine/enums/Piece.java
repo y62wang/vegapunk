@@ -16,22 +16,22 @@ public enum Piece
     B_KING(Side.BLACK, PieceType.KING),
     NO_PIECE(Side.NO_SIDE, PieceType.NO_TYPE);
 
-    private static final String PIECE_CHARS = "PNBRQKpnbrqk";
-    private static final Piece[] PIECES = new Piece[]
+    private static String PIECE_CHARS = "PNBRQKpnbrqk";
+    private static Piece[] PIECES = new Piece[]
             {
                     W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
                     B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
                     NO_PIECE
             };
 
-    private static final Piece[][] PIECES_COLOR_TYPE_MAPPING = new Piece[][]
+    private static Piece[][] PIECES_COLOR_TYPE_MAPPING = new Piece[][]
             {
                     {W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING},
                     {B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING}
             };
 
-    public final Side side;
-    public final PieceType type;
+    public Side side;
+    public PieceType type;
 
     Piece(Side side, PieceType type)
     {
@@ -41,7 +41,7 @@ public enum Piece
 
     public char pieceName()
     {
-        return PIECE_CHARS.charAt(this.type.index+6*side.index);
+        return PIECE_CHARS.charAt(type.index + 6 * side.index);
     }
 
     public static Piece of(char pieceChar)

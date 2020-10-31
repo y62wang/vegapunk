@@ -4,27 +4,27 @@ import com.y62wang.chess.engine.Move;
 
 public class MoveSorter
 {
-    public void sort(final short[] moves)
+    public void sort(short[] moves)
     {
         // insertion sort .. for now
         for (int i = 0; i < moves.length; i++)
         {
             for (int j = i; j > 0; j--)
             {
-                if (this.compare(moves[j], moves[j - 1]) >= 0)
+                if (compare(moves[j], moves[j - 1]) >= 0)
                 {
                     break;
                 }
 
                 // swap
-                final short temp = moves[j];
+                short temp = moves[j];
                 moves[j] = moves[j-1];
                 moves[j-1] = temp;
             }
         }
     }
 
-    public int compare(final short moveA, final short moveB)
+    public int compare(short moveA, short moveB)
     {
         return Move.moveCode(moveA) - Move.moveCode(moveB);
     }

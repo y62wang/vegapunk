@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Engine
 {
-    private final SearchDriver searchDriver;
+    private SearchDriver searchDriver;
 
     private GameState gameState;
     private EngineState engineState;
@@ -42,7 +42,7 @@ public class Engine
         GameState newGameState = new GameState();
         newGameState.setBoard(new Bitboard());
         newGameState.setComputationTime(Duration.ZERO);
-        this.gameState = newGameState;
+        gameState = newGameState;
     }
 
     public String stopSearch()
@@ -64,7 +64,7 @@ public class Engine
 
     public void setBoard(Bitboard board)
     {
-        this.gameState.setBoard(board);
+        gameState.setBoard(board);
     }
 
     public void ponder()
@@ -81,14 +81,14 @@ public class Engine
         gameState.getBoard().makeMove(move);
     }
 
-    public void setDebugging(final boolean on)
+    public void setDebugging(boolean on)
     {
-        this.debug = on;
+        debug = on;
     }
 
-    public void fen(final String fenString)
+    public void setBoard(String fenString)
     {
-        this.setBoard(new Bitboard(fenString));
+        setBoard(new Bitboard(fenString));
     }
 
     public GameState getGameState()

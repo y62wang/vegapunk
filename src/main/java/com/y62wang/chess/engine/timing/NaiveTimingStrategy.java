@@ -10,7 +10,7 @@ import java.time.Duration;
 public class NaiveTimingStrategy implements TimingStrategy
 {
     @Override
-    public Duration decideSearchTime(final GameState state, final GoCommand command)
+    public Duration decideSearchTime(GameState state, GoCommand command)
     {
         Bitboard board = state.getBoard();
         if (command.getMovetime() != null)

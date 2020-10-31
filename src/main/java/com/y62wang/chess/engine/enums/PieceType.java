@@ -10,18 +10,18 @@ public enum PieceType
     KING(5, 'k'),
     NO_TYPE(6, ' ');
 
-    private static final PieceType[] map = new PieceType[] {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_TYPE};
-    private static final char[] pieceChars = new char[] {'p', 'n', 'b', 'r', 'q', 'k',' '};
+    private static PieceType[] map = new PieceType[] {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_TYPE};
+    private static char[] pieceChars = new char[] {'p', 'n', 'b', 'r', 'q', 'k',' '};
 
-    public static final int NUM_TYPES = 6;
+    public static int NUM_TYPES = 6;
 
-    public final int index;
-    public final char pieceChar;
+    public int index;
+    public char pieceChar;
 
-    PieceType(final int index, final char c)
+    PieceType(int index, char c)
     {
         this.index = index;
-        this.pieceChar = c;
+        pieceChar = c;
     }
 
     public static PieceType of(int index)

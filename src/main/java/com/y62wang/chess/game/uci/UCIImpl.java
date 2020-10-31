@@ -16,17 +16,17 @@ import java.time.Duration;
 @Log4j2
 public class UCIImpl implements UCI
 {
-    private final Engine engine;
-    private final EngineInfo engineInfo;
-    private final PrintStream out;
+    private Engine engine;
+    private EngineInfo engineInfo;
+    private PrintStream out;
     private TimingStrategy timingStrategy;
 
     public UCIImpl(Engine engine, EngineInfo engineInfo, PrintStream outputStream)
     {
         this.engine = engine;
         this.engineInfo = engineInfo;
-        this.out = outputStream;
-        this.timingStrategy = new NaiveTimingStrategy();
+        out = outputStream;
+        timingStrategy = new NaiveTimingStrategy();
     }
 
     @Override
@@ -44,13 +44,13 @@ public class UCIImpl implements UCI
     }
 
     @Override
-    public void debug(final boolean on)
+    public void debug(boolean on)
     {
         engine.setDebugging(on);
     }
 
     @Override
-    public void setOption(final SetOptionCommand cmd)
+    public void setOption(SetOptionCommand cmd)
     {
         log.warn("Unable to set option '{}' with value '{}'", cmd.getName(), cmd.getValue());
     }
@@ -62,7 +62,7 @@ public class UCIImpl implements UCI
     }
 
     @Override
-    public void register(final RegisterCommand cmd)
+    public void register(RegisterCommand cmd)
     {
         throw new UnsupportedOperationException();
     }
@@ -74,26 +74,26 @@ public class UCIImpl implements UCI
     }
 
     @Override
-    public void position(final PositionCommand cmd)
+    public void position(PositionCommand cmd)
     {
         if ("startpos".equals(cmd.getPosition()))
         {
             engine.newGame();
-            for (final String move : cmd.getMoves())
+            for (String move : cmd.getMoves())
             {
                 engine.playMove(move);
             }
         }
         else
         {
-            engine.fen(cmd.getPosition());
+            engine.setBoard(cmd.getPosition());
         }
 
         log.info("board: " + engine.getGameState().getBoard());
     }
 
     @Override
-    public void go(final GoCommand cmd)
+    public void go(GoCommand cmd)
     {
         String bestMove = null;
 

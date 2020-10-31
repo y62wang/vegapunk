@@ -1,5 +1,6 @@
-package com.y62wang.chess.engine;
+package com.y62wang.chess.engine.util;
 
+import com.y62wang.chess.engine.Move;
 import com.y62wang.chess.engine.bits.Endianess;
 
 import java.util.Collection;
@@ -8,7 +9,7 @@ import java.util.stream.IntStream;
 import static com.y62wang.chess.engine.Bitboard.BOARD_WIDTH;
 import static com.y62wang.chess.engine.Bitboard.SIZE;
 
-public class Util
+public class BitboardUtil
 {
     public static String bitboardString(long board)
     {
@@ -34,7 +35,7 @@ public class Util
 
     public static void printMoves(Collection<Short> moves)
     {
-        for (final Short move : moves)
+        for (Short move : moves)
         {
             System.out.print(Move.moveString(move) + " ");
         }

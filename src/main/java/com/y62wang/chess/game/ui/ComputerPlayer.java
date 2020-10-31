@@ -12,7 +12,7 @@ import java.time.Duration;
 
 public class ComputerPlayer
 {
-    public static void makeComputerMove(final Bitboard board)
+    public static void makeComputerMove(Bitboard board)
     {
         Stopwatch start = Stopwatch.createStarted();
         SearchAlgorithm searchAlgorithm = new AlphaBeta(new TranspositionTable<>());

@@ -7,7 +7,7 @@ public class Magic
     private long innerMask;
     private long[] attacks;
 
-    public Magic(final int bitShifts, final long magic, final long innerMask, final long[] attacks)
+    public Magic(int bitShifts, long magic, long innerMask, long[] attacks)
     {
         this.bitShifts = bitShifts;
         this.magic = magic;

@@ -8,7 +8,7 @@ import java.util.Random;
 
 public class TranspositionTable<T>
 {
-    private static final int WP = 1;
+    private static int WP = 1;
     private Random random;
     private long[][] piecesKeys;
     private long[] keys = new long[13];
@@ -76,8 +76,8 @@ public class TranspositionTable<T>
 
     public void cleanup()
     {
-        if(this.tt.size()>10000000) {
-            this.tt.clear();
+        if(tt.size() > 10000000) {
+            tt.clear();
         }
     }
 }

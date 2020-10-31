@@ -21,5 +21,4 @@ public class GoCommand
     private Long btime;
     private Long depth;
     private List<String> searchMoves;
-
 }

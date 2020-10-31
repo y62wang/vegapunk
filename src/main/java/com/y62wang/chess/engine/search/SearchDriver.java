@@ -1,5 +1,6 @@
 package com.y62wang.chess.engine.search;
 
+import com.google.common.base.Verify;
 import com.y62wang.chess.engine.Bitboard;
 import lombok.extern.log4j.Log4j2;
 
@@ -13,8 +14,8 @@ import java.util.concurrent.TimeoutException;
 @Log4j2
 public class SearchDriver
 {
-    private final SearchAlgorithm searchAlgorithm;
-    private final ExecutorService executorService;
+    private SearchAlgorithm searchAlgorithm;
+    private ExecutorService executorService;
 
     private SearchConfiguration configuration;
 
@@ -23,7 +24,7 @@ public class SearchDriver
 
     public SearchDriver(SearchAlgorithm searchAlgorithm)
     {
-        this.executorService = Executors.newFixedThreadPool(1);
+        executorService = Executors.newFixedThreadPool(1);
         this.searchAlgorithm = searchAlgorithm;
     }
 
@@ -34,7 +35,7 @@ public class SearchDriver
 
     public SearchResult search(Bitboard board, long timeout, TimeUnit timeUnit)
     {
-        assert (future == null || future.isDone() || future.isCancelled());
+        Verify.verify(future == null || future.isDone() || future.isCancelled());
         intermediateResult = new SearchResult(( short ) -1, -1);
         try
         {

@@ -26,7 +26,7 @@ public class HumanPlayer
         else if (line.length() == 2)
         {
             int boardIndex = Move.boardIndex(line);
-            for (final short move : moves)
+            for (short move : moves)
             {
                 if (Move.toSquare(move) == boardIndex && board.getPieceList().onSquare(Move.fromSquare(move)).type == PieceType.PAWN)
                 {
@@ -40,7 +40,7 @@ public class HumanPlayer
         else if (line.length() == 3)
         {
             int boardIndex = Move.boardIndex(line.substring(1));
-            for (final short move : moves)
+            for (short move : moves)
             {
                 if (Move.toSquare(move) == boardIndex && board.getPieceList().onSquare(Move.fromSquare(move)).type.pieceChar == Character.toLowerCase(line.charAt(0)))
                 {

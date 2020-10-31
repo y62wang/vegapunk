@@ -25,10 +25,10 @@ public class PopulationCountTest
         System.out.println("Elapsed Time: " + stopwatch.elapsed());
     }
 
-    private void validatePopCount(final long number)
+    private void validatePopCount(long number)
     {
         String message = "Population Count for " + number + " is wrong.";
-        final int expected = Long.bitCount(number);
+        int expected = Long.bitCount(number);
         Assert.assertEquals(message, expected, PopulationCount.popCount(number));
     }
 }

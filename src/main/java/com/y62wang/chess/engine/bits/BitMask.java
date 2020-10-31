@@ -2,7 +2,7 @@ package com.y62wang.chess.engine.bits;
 
 public class BitMask
 {
-    public static final long MASK_8_BITS = getMask(8);
+    public static long MASK_8_BITS = getMask(8);
 
     /**
      * get an n-bits mask at least significant bits

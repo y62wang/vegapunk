@@ -5,7 +5,7 @@ public class SearchNode
     public short move;
     public double score;
 
-    public SearchNode(final short move, final double score)
+    public SearchNode(short move, double score)
     {
         this.move = move;
         this.score = score;

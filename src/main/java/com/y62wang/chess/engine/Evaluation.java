@@ -9,32 +9,32 @@ import static com.y62wang.chess.engine.bits.PopulationCount.popCount;
 
 public class Evaluation
 {
-    private static final Random random = new Random(0);
+    private static Random random = new Random(0);
 
-    public static double evaluate(final Bitboard bb)
+    public static double evaluate(Bitboard bb)
     {
         return evaluate(bb, Side.WHITE) - evaluate(bb, Side.BLACK);
     }
 
-    public static double evaluateAbsolute(final Bitboard bb)
+    public static double evaluateAbsolute(Bitboard bb)
     {
         return evaluate(bb, bb.getTurn()) - evaluate(bb, bb.getTurn().flip());
     }
 
-    private static double evaluate(final Bitboard bb, final Side side)
+    private static double evaluate(Bitboard bb, Side side)
     {
-        final int moveCount = bb.legalMoves().length;
+        int moveCount = bb.legalMoves().length;
         if (moveCount == 0)
         {
             return -1000;
         }
 
-        final long k = bb.getPieceList().piecesBB(side, PieceType.KING);
-        final long q = bb.getPieceList().piecesBB(side, PieceType.QUEEN);
-        final long r = bb.getPieceList().piecesBB(side, PieceType.ROOK);
-        final long b = bb.getPieceList().piecesBB(side, PieceType.BISHOP);
-        final long n = bb.getPieceList().piecesBB(side, PieceType.KNIGHT);
-        final long p = bb.getPieceList().piecesBB(side, PieceType.PAWN);
+        long k = bb.getPieceList().piecesBB(side, PieceType.KING);
+        long q = bb.getPieceList().piecesBB(side, PieceType.QUEEN);
+        long r = bb.getPieceList().piecesBB(side, PieceType.ROOK);
+        long b = bb.getPieceList().piecesBB(side, PieceType.BISHOP);
+        long n = bb.getPieceList().piecesBB(side, PieceType.KNIGHT);
+        long p = bb.getPieceList().piecesBB(side, PieceType.PAWN);
 
         double pawnScores = 0;
         if (side == Side.WHITE)
@@ -50,8 +50,8 @@ public class Evaluation
             pawnScores += popCount(p & (BoardConstants.RANK_4 | BoardConstants.RANK_5)) * 0.01;
         }
 
-        final long targets = bb.targets(side);
-        final double value = popCount(k) * 200
+        long targets = bb.targets(side);
+        double value = popCount(k) * 200
                          + popCount(q) * 9
                          + popCount(r) * 5
                          + popCount(b) * 3

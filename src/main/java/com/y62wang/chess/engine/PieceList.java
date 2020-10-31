@@ -1,9 +1,11 @@
 package com.y62wang.chess.engine;
 
+import com.google.common.base.Verify;
 import com.y62wang.chess.engine.bits.Endianess;
 import com.y62wang.chess.engine.enums.Piece;
 import com.y62wang.chess.engine.enums.PieceType;
 import com.y62wang.chess.engine.enums.Side;
+import com.y62wang.chess.engine.util.UnicodeChessPieceUtil;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -13,7 +15,7 @@ import static com.y62wang.chess.engine.Bitboard.SIZE;
 
 public class PieceList
 {
-    public static final int MAX_PIECES = 10;
+    public static int MAX_PIECES = 10;
 
     private Piece[] board;
     private int[][][] pieces;
@@ -45,7 +47,7 @@ public class PieceList
     {
         int[] list = pieces[side.index][type.index];
         int size = count[side.index][type.index];
-        assert size > 0;
+        Verify.verify(size > 0);
 
         for (int i = 0; i < size; i++)
         {
@@ -70,14 +72,16 @@ public class PieceList
         {
             removePiece(piece.side, piece.type, square);
         }
-        assert onSquare(square) == Piece.NO_PIECE;
+        Verify.verify(onSquare(square) == Piece.NO_PIECE);
         return piece;
     }
 
     public void movePiece(int from, int to)
     {
         Piece piece = onSquare(from);
-        assert piece != null && piece != Piece.NO_PIECE;
+
+        Verify.verify(piece != null && piece != Piece.NO_PIECE);
+
         addPiece(piece, to);
         removePiece(from);
     }
@@ -151,7 +155,7 @@ public class PieceList
                             {
                                 sb.append(" ").append(1 + i / 8).append("   ");
                             }
-                            Piece piece = this.onSquare(i);
+                            Piece piece = onSquare(i);
                             if (piece != Piece.NO_PIECE)
                             {
                                 sb.append(UnicodeChessPieceUtil.toUnicode(piece.pieceName()));
@@ -171,11 +175,11 @@ public class PieceList
     }
 
     @Override
-    public boolean equals(final Object o)
+    public boolean equals(Object o)
     {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        final PieceList pieceList = ( PieceList ) o;
+        PieceList pieceList = ( PieceList ) o;
         return Arrays.equals(board, pieceList.board) &&
                Arrays.equals(pieces, pieceList.pieces) &&
                Arrays.equals(count, pieceList.count);

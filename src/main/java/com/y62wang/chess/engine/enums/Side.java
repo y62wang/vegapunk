@@ -7,11 +7,11 @@ public enum Side
     BLACK(1),
     NO_SIDE(2);
 
-    public static final int NUM_SIDES = 2;
+    public static int NUM_SIDES = 2;
 
-    public final int index;
+    public int index;
 
-    Side(final int index)
+    Side(int index)
     {
         this.index = index;
     }

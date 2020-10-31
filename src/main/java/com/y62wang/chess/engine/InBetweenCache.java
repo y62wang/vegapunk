@@ -7,7 +7,7 @@ public class InBetweenCache
 
     private static InBetweenCache INSTANCE;
 
-    private final long[][] cache;
+    private long[][] cache;
 
     private InBetweenCache()
     {

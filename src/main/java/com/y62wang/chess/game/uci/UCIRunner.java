@@ -12,8 +12,8 @@ import java.util.Scanner;
 @Log4j2
 public class UCIRunner
 {
-    private final Scanner scanner;
-    private final UCI uci;
+    private Scanner scanner;
+    private UCI uci;
 
     public UCIRunner(Scanner scanner, UCI uci)
     {

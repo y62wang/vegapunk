@@ -10,6 +10,6 @@ import java.util.List;
 @Builder
 public class SearchParameters
 {
-    private final Duration timeLimit;
-    private final List<String> moves;
+    private Duration timeLimit;
+    private List<String> moves;
 }

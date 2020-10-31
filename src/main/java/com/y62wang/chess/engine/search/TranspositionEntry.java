@@ -6,7 +6,7 @@ public class TranspositionEntry
     double score;
     double depth;
 
-    public TranspositionEntry(final short bestMove, final double score, final double depth)
+    public TranspositionEntry(short bestMove, double score, double depth)
     {
         this.bestMove = bestMove;
         this.score = score;

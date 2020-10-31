@@ -13,27 +13,27 @@ import static java.lang.Math.min;
 public class AlphaBeta implements SearchAlgorithm
 {
 
-    public static final int NEGATIVE_INFINITY = -10000000;
-    public static final int POSITIVE_INFINITY = 10000000;
+    public static int NEGATIVE_INFINITY = -10000000;
+    public static int POSITIVE_INFINITY = 10000000;
 
-    private final TranspositionTable<TranspositionEntry> transpositionTable;
-    private final MoveSorter moveSorter;
+    private TranspositionTable<TranspositionEntry> transpositionTable;
+    private MoveSorter moveSorter;
 
     public AlphaBeta(TranspositionTable<TranspositionEntry> transpositionTable)
     {
-        this.moveSorter = new MoveSorter();
+        moveSorter = new MoveSorter();
         this.transpositionTable = transpositionTable;
     }
 
     @Override
-    public SearchNode search(final Bitboard board, final int depth)
+    public SearchNode search(Bitboard board, int depth)
     {
         transpositionTable.cleanup();
         return alphabeta(board, depth, NEGATIVE_INFINITY, POSITIVE_INFINITY, board.isWhiteTurn(), null);
     }
 
     @Override
-    public SearchNode iterativeDeepening(final Bitboard board, final int depth, final SearchResult intermediateResult)
+    public SearchNode iterativeDeepening(Bitboard board, int depth, SearchResult intermediateResult)
     {
         transpositionTable.cleanup();
         SearchNode result = null;
@@ -87,7 +87,7 @@ public class AlphaBeta implements SearchAlgorithm
 
             SearchNode maxEval = new SearchNode(rootMove == null ? moves[0] : rootMove.move, NEGATIVE_INFINITY);
 
-            for (final short move : moves)
+            for (short move : moves)
             {
                 board.makeMove(move);
                 SearchNode result = alphabeta(board, depth - 1, alpha, beta, false, rootMove == null ? new SearchNode(move, NEGATIVE_INFINITY) : rootMove);
@@ -113,7 +113,7 @@ public class AlphaBeta implements SearchAlgorithm
                 return rootMove == null ? new SearchNode(( short ) 0, POSITIVE_INFINITY) : new SearchNode(rootMove.move, POSITIVE_INFINITY);
             }
             SearchNode minEval = new SearchNode(rootMove == null ? moves[0] : rootMove.move, POSITIVE_INFINITY);
-            for (final short move : moves)
+            for (short move : moves)
             {
                 board.makeMove(move);
                 SearchNode result = alphabeta(board, depth - 1, alpha, beta, true, rootMove == null ? new SearchNode(move, POSITIVE_INFINITY) : rootMove);
@@ -158,7 +158,7 @@ public class AlphaBeta implements SearchAlgorithm
         }
 
         short[] legalMoves = board.legalMoves();
-        for (final short move : legalMoves)
+        for (short move : legalMoves)
         {
             if (!Move.isCapture(move))
             {

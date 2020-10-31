@@ -18,8 +18,8 @@ public class MagicCache
 {
     private static MagicCache INSTANCE;
 
-    private final Magic[] bishopMagic;
-    private final Magic[] rookMagic;
+    private Magic[] bishopMagic;
+    private Magic[] rookMagic;
 
     static
     {
@@ -56,7 +56,7 @@ public class MagicCache
         return magicCache;
     }
 
-    private long[] indexAttacksCache(final int square, final int magicBits, final long magicNumber, final long mask, BiFunction<Integer, Long, Long> attackFunction)
+    private long[] indexAttacksCache(int square, int magicBits, long magicNumber, long mask, BiFunction<Integer, Long, Long> attackFunction)
     {
         List<Integer> squares = BoardUtil.squaresOfBB(mask);
         long[] attacks = new long[( int ) Math.pow(2, magicBits)];
