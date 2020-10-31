@@ -30,7 +30,7 @@ public class Move
     public static final short BLACK_KING_CASTLE_MOVE = move(60, 62, KING_CASTLE);
     public static final short BLACK_QUEEN_CASTLE_MOVE = move(60, 58, QUEEN_CASTLE);
 
-    public static short move(int from, int to, int code)
+    public static short move(final int from, final int to, final int code)
     {
         assert from >= 0 && from < BOARD_SIZE;
         assert to >= 0 && to < BOARD_SIZE;
@@ -43,85 +43,85 @@ public class Move
         return move;
     }
 
-    public static boolean isPromotion(short move)
+    public static boolean isPromotion(final short move)
     {
         // 3rd bit is a promotion
         return (move & 8) != 0;
     }
 
-    public static boolean isCapture(short move)
+    public static boolean isCapture(final short move)
     {
         return (move & 4) != 0;
     }
 
-    public static boolean isSpecial1(short move)
+    public static boolean isSpecial1(final short move)
     {
         return (move & 2) != 0;
     }
 
-    public static boolean isSpecial0(short move)
+    public static boolean isSpecial0(final short move)
     {
         return (move & 1) != 0;
     }
 
-    public static boolean isCastle(short move)
+    public static boolean isCastle(final short move)
     {
         return isKingCastle(move) || isQueenCastle(move);
     }
 
-    public static boolean isKingCastle(short move)
+    public static boolean isKingCastle(final short move)
     {
         return moveCode(move) == KING_CASTLE;
     }
 
-    public static boolean isQueenCastle(short move)
+    public static boolean isQueenCastle(final short move)
     {
         return moveCode(move) == QUEEN_CASTLE;
     }
 
-    public static boolean isEnpassant(short move)
+    public static boolean isEnpassant(final short move)
     {
         return moveCode(move) == EP_CAPTURE;
     }
 
-    public static boolean isDoublePawnPush(short move)
+    public static boolean isDoublePawnPush(final short move)
     {
         return moveCode(move) == DOUBLE_PAWN_PUSH;
     }
 
-    public static boolean isPromoCapture(short move)
+    public static boolean isPromoCapture(final short move)
     {
         return isPromotion(move) && isCapture(move);
     }
 
-    public static int fromSquare(short move)
+    public static int fromSquare(final short move)
     {
         // bit shift will return an int, with padded 1's if the number is negative
         // therefore masking is required
         return (move >>> 10) & SQUARE_MASK;
     }
 
-    public static int toSquare(short move)
+    public static int toSquare(final short move)
     {
         return (move >>> 4) & SQUARE_MASK;
     }
 
-    public static long toSquareBB(short move)
+    public static long toSquareBB(final short move)
     {
         return BoardUtil.squareBB(toSquare(move));
     }
 
-    public static long fromSquareBB(short move)
+    public static long fromSquareBB(final short move)
     {
         return BoardUtil.squareBB(fromSquare(move));
     }
 
-    public static int moveCode(short move)
+    public static int moveCode(final short move)
     {
         return move & MOVE_TYPE_MASK;
     }
 
-    public static String moveString(short move)
+    public static String moveString(final short move)
     {
 //        if (moveCode(move) == KING_CASTLE)
 //        {
@@ -134,10 +134,10 @@ public class Move
         return Square.squareString(fromSquare(move)) + Square.squareString(toSquare(move));
     }
 
-    public static int boardIndex(String location)
+    public static int boardIndex(final String location)
     {
-        int fileIndex = fileToIndex(location.charAt(0));
-        int rankIndex = rankToIndex(location.charAt(1));
+        final int fileIndex = fileToIndex(location.charAt(0));
+        final int rankIndex = rankToIndex(location.charAt(1));
         return BoardUtil.square(fileIndex, rankIndex);
     }
 
@@ -150,31 +150,32 @@ public class Move
         return (fileChar - 'a');
     }
 
-    public static int rankToIndex(char rankChar)
+    public static int rankToIndex(final char rankChar)
     {
         return rankChar - '1';
     }
 
-    public static short of(String str, short moveType)
+    public static short of(final String str, final short moveType)
     {
         if (str == null || str.length() > 5 || str.length() < 4)
         {
             throw new IllegalArgumentException("Illegal input for a move " + str);
         }
+
         if (str.length() == 5)
         {
-            char promotionType = str.charAt(4);
-
+            final char promotionType = str.charAt(4);
         }
+
         return Move.move(boardIndex(str.substring(0, 2)), boardIndex(str.substring(2, 4)), moveType);
     }
 
-    public static short of(String str)
+    public static short of(final String str)
     {
         return of(str, ( short ) 0);
     }
 
-    public static short of(String from, String to)
+    public static short of(final String from, final String to)
     {
         if (from == null || to == null || from.length() != 2 || to.length() != 2)
         {

@@ -4,90 +4,59 @@ import com.y62wang.chess.engine.Bitboard;
 import com.y62wang.chess.engine.Evaluation;
 import com.y62wang.chess.engine.Move;
 import com.y62wang.chess.engine.TranspositionTable;
+import lombok.extern.log4j.Log4j2;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-public class AlphaBeta
+@Log4j2
+public class AlphaBeta implements SearchAlgorithm
 {
 
     public static final int NEGATIVE_INFINITY = -10000000;
     public static final int POSITIVE_INFINITY = 10000000;
 
-    private static TranspositionTable<TranspositionEntry> tt = new TranspositionTable<>();
+    private final TranspositionTable<TranspositionEntry> transpositionTable;
+    private final MoveSorter moveSorter;
 
-    private static class TranspositionEntry
+    public AlphaBeta(TranspositionTable<TranspositionEntry> transpositionTable)
     {
-        short bestMove;
-        double score;
-        double depth;
-
-        public TranspositionEntry(final short bestMove, final double score, final double depth)
-        {
-            this.bestMove = bestMove;
-            this.score = score;
-            this.depth = depth;
-        }
+        this.moveSorter = new MoveSorter();
+        this.transpositionTable = transpositionTable;
     }
 
-    public static class Node
+    @Override
+    public SearchNode search(final Bitboard board, final int depth)
     {
-        public short move;
-        public double score;
-
-        public Node(final short move, final double score)
-        {
-            this.move = move;
-            this.score = score;
-        }
+        transpositionTable.cleanup();
+        return alphabeta(board, depth, NEGATIVE_INFINITY, POSITIVE_INFINITY, board.isWhiteTurn(), null);
     }
 
-    public static Node search(Bitboard board, int depth)
+    @Override
+    public SearchNode iterativeDeepening(final Bitboard board, final int depth, final SearchResult intermediateResult)
     {
-        tt.cleanup();
-        Node result = alphabeta(board, depth, NEGATIVE_INFINITY, POSITIVE_INFINITY, board.isWhiteTurn(), null);
+        transpositionTable.cleanup();
+        SearchNode result = null;
+        String before = board.toString();
+        for (int i = 1; i <= depth; i++)
+        {
+            result = alphabeta(board, i, NEGATIVE_INFINITY, POSITIVE_INFINITY, board.isWhiteTurn(), null);
+
+            if(!before.equals(board.toString())) {
+                log.error("board state is wrong");
+                log.error("before " + before);
+                log.error("after" + board.toString());
+            }
+            log.info("ID: " + board.toString());
+            intermediateResult.setMove(result.move);
+            intermediateResult.setScore(result.score);
+        }
         return result;
     }
 
-    private static Node firstLevelSearchMax(Bitboard bb, int depth)
+    public SearchNode alphabeta(Bitboard board, int depth, double alpha, double beta, boolean maximizing, SearchNode rootMove)
     {
-        double maxScore = NEGATIVE_INFINITY;
-        short best = 0;
-        for (final short move : bb.legalMoves())
-        {
-            bb.makeMove(move);
-            double result = -negamax2(bb, depth - 1, NEGATIVE_INFINITY, POSITIVE_INFINITY);
-            if (result > maxScore)
-            {
-                maxScore = result;
-                best = move;
-            }
-            bb.unmake();
-        }
-        return new Node(best, maxScore);
-    }
-
-    private static Node firstLevelSearchMin(Bitboard bb, int depth)
-    {
-        double minScore = NEGATIVE_INFINITY;
-        short best = 0;
-        for (final short move : bb.legalMoves())
-        {
-            bb.makeMove(move);
-            double result = -negamax2(bb, depth - 1, NEGATIVE_INFINITY, POSITIVE_INFINITY);
-            if (result > minScore)
-            {
-                minScore = result;
-                best = move;
-            }
-            bb.unmake();
-        }
-        return new Node(best, minScore);
-    }
-
-    public static Node alphabeta(Bitboard board, int depth, double alpha, double beta, boolean maximizing, Node rootMove)
-    {
-        long key = tt.hash(board);
+        long key = transpositionTable.hash(board);
 
         if (depth == 0)
         {
@@ -96,35 +65,32 @@ public class AlphaBeta
             {
                 score = score * -1;
             }
-            //tt.put(key, new TranspositionEntry(rootMove.move, score, depth));
-            //return new Node(rootMove.move, Evaluation.evaluate(board));
 
-            return new Node(rootMove.move, score);
+            return new SearchNode(rootMove.move, score);
         }
 
-        TranspositionEntry value = tt.getValue(key);
+        TranspositionEntry value = transpositionTable.getValue(key);
         if (value != null && value.depth >= 2 && rootMove != null)
         {
-//            System.out.println(board);
-//            System.out.println(String.format("Move: %s E: %s A: %s\n", Move.moveString(rootMove.move), value.score, Evaluation.evaluate(board)));
-            return new Node(rootMove.move, value.score);
+            return new SearchNode(rootMove.move, value.score);
         }
 
         short[] moves = board.legalMoves();
+        moveSorter.sort(moves);
 
         if (maximizing)
         {
             if (moves.length == 0)
             {
-                return rootMove == null ? new Node(( short ) 0, NEGATIVE_INFINITY) : new Node(rootMove.move, NEGATIVE_INFINITY);
+                return rootMove == null ? new SearchNode(( short ) 0, NEGATIVE_INFINITY) : new SearchNode(rootMove.move, NEGATIVE_INFINITY);
             }
 
-            Node maxEval = new Node(rootMove == null ? moves[0] : rootMove.move, NEGATIVE_INFINITY);
+            SearchNode maxEval = new SearchNode(rootMove == null ? moves[0] : rootMove.move, NEGATIVE_INFINITY);
 
             for (final short move : moves)
             {
                 board.makeMove(move);
-                Node result = alphabeta(board, depth - 1, alpha, beta, false, rootMove == null ? new Node(move, NEGATIVE_INFINITY) : rootMove);
+                SearchNode result = alphabeta(board, depth - 1, alpha, beta, false, rootMove == null ? new SearchNode(move, NEGATIVE_INFINITY) : rootMove);
                 board.unmake();
                 if (result.score > maxEval.score)
                 {
@@ -137,20 +103,20 @@ public class AlphaBeta
                     break;
                 }
             }
-            tt.put(key, new TranspositionEntry(maxEval.move, maxEval.score, depth));
+            transpositionTable.put(key, new TranspositionEntry(maxEval.move, maxEval.score, depth));
             return maxEval;
         }
         else
         {
             if (moves.length == 0)
             {
-                return rootMove == null ? new Node(( short ) 0, POSITIVE_INFINITY) : new Node(rootMove.move, POSITIVE_INFINITY);
+                return rootMove == null ? new SearchNode(( short ) 0, POSITIVE_INFINITY) : new SearchNode(rootMove.move, POSITIVE_INFINITY);
             }
-            Node minEval = new Node(rootMove == null ? moves[0] : rootMove.move, POSITIVE_INFINITY);
+            SearchNode minEval = new SearchNode(rootMove == null ? moves[0] : rootMove.move, POSITIVE_INFINITY);
             for (final short move : moves)
             {
                 board.makeMove(move);
-                Node result = alphabeta(board, depth - 1, alpha, beta, true, rootMove == null ? new Node(move, POSITIVE_INFINITY) : rootMove);
+                SearchNode result = alphabeta(board, depth - 1, alpha, beta, true, rootMove == null ? new SearchNode(move, POSITIVE_INFINITY) : rootMove);
                 board.unmake();
                 if (result.score < minEval.score)
                 {
@@ -163,78 +129,16 @@ public class AlphaBeta
                     break;
                 }
             }
-            tt.put(key, new TranspositionEntry(minEval.move, minEval.score, depth));
+            transpositionTable.put(key, new TranspositionEntry(minEval.move, minEval.score, depth));
             return minEval;
         }
     }
 
-    public static Node negamax(Bitboard board, int depth, double alpha, double beta, Node rootMove)
+    public double quiesce(Bitboard board, double alpha, double beta)
     {
-        if (depth == 0)
-        {
-            return new Node(rootMove.move, quiesce(board, alpha, beta));
-        }
+        long key = transpositionTable.hash(board);
 
-        Node alphaNode = null;
-
-        for (final short move : board.legalMoves())
-        {
-            if (rootMove == null)
-            {
-                rootMove = new Node(move, NEGATIVE_INFINITY);
-            }
-
-            board.makeMove(move);
-            Node resultNode = negamax(board, depth - 1, -beta, -alpha, rootMove);
-            double result = -resultNode.score;
-            board.unmake();
-
-            if (result >= beta)
-            {
-                return new Node(rootMove.move, beta);
-            }
-
-            if (result > alpha)
-            {
-                alpha = result;
-                alphaNode = new Node(rootMove.move, result);
-            }
-        }
-        return new Node(rootMove.move, alpha);
-
-    }
-
-    public static double negamax2(Bitboard board, int depth, double alpha, double beta)
-    {
-        if (depth == 0)
-        {
-            return quiesce(board, alpha, beta);
-        }
-
-        for (final short move : board.legalMoves())
-        {
-            board.makeMove(move);
-            double result = -negamax2(board, depth - 1, -beta, -alpha);
-            board.unmake();
-
-            if (result >= beta)
-            {
-                return beta;
-            }
-
-            if (result > alpha)
-            {
-                alpha = result;
-            }
-        }
-        return alpha;
-    }
-
-    public static double quiesce(Bitboard board, double alpha, double beta)
-    {
-        long key = tt.hash(board);
-
-        TranspositionEntry value = tt.getValue(key);
+        TranspositionEntry value = transpositionTable.getValue(key);
         if (value != null && value.depth >= 2)
         {
             return value.score;
@@ -244,7 +148,7 @@ public class AlphaBeta
 
         if (val >= beta)
         {
-            tt.put(key, new TranspositionEntry(( short ) 0, beta, 0));
+            transpositionTable.put(key, new TranspositionEntry(( short ) 0, beta, 0));
             return beta;
         }
 
@@ -253,20 +157,23 @@ public class AlphaBeta
             alpha = val;
         }
 
-        for (final short move : board.legalMoves())
+        short[] legalMoves = board.legalMoves();
+        for (final short move : legalMoves)
         {
             if (!Move.isCapture(move))
             {
                 continue;
             }
 
+            String before = board.toString();
             board.makeMove(move);
+            String after = board.toString();
             double result = -quiesce(board, -beta, -alpha);
             board.unmake();
 
             if (result >= beta)
             {
-                tt.put(key, new TranspositionEntry(( short ) 0, beta, 0));
+                transpositionTable.put(key, new TranspositionEntry(( short ) 0, beta, 0));
                 return beta;
             }
 
@@ -275,51 +182,8 @@ public class AlphaBeta
                 alpha = result;
             }
         }
-        tt.put(key, new TranspositionEntry(( short ) 0, alpha, 0));
+        transpositionTable.put(key, new TranspositionEntry(( short ) 0, alpha, 0));
         return alpha;
-    }
-
-    public static Node minimax(Bitboard board, int depth, boolean maximizing, Node rootMove)
-    {
-        if (depth == 0)
-        {
-            return new Node(rootMove.move, Evaluation.evaluate(board));
-        }
-
-        if (maximizing)
-        {
-            Node maxEval = new Node(( short ) 0, NEGATIVE_INFINITY);
-            short[] moves = board.legalMoves();
-            for (final short move : moves)
-            {
-                board.makeMove(move);
-                Node result = minimax(board, depth - 1, false, rootMove == null ? new Node(move, NEGATIVE_INFINITY) : rootMove);
-                board.unmake();
-                if (maxEval.score < result.score)
-                {
-                    maxEval.score = result.score;
-                    maxEval.move = move;
-                }
-            }
-            return maxEval;
-        }
-        else
-        {
-            Node minEval = new Node(( short ) 0, POSITIVE_INFINITY);
-            short[] moves = board.legalMoves();
-            for (final short move : moves)
-            {
-                board.makeMove(move);
-                Node result = minimax(board, depth - 1, true, rootMove == null ? new Node(move, POSITIVE_INFINITY) : rootMove);
-                board.unmake();
-                if (result.score < minEval.score)
-                {
-                    minEval.score = result.score;
-                    minEval.move = move;
-                }
-            }
-            return minEval;
-        }
     }
 
 }

@@ -1,13 +1,13 @@
 package com.y62wang.chess.engine;
 
-import com.y62wang.chess.engine.search.AlphaBeta.Node;
+import com.y62wang.chess.engine.search.SearchNode;
 
 public class SomeTest
 {
     public static void main(String[] args)
     {
         Bitboard bb = new Bitboard();
-        TranspositionTable<Node> tt = new TranspositionTable<>();
+        TranspositionTable<SearchNode> tt = new TranspositionTable<>();
         long hash = tt.hash(bb);
         bb.makeMove(Move.of("e2e4"));
         long hash2 = tt.hash(bb);
