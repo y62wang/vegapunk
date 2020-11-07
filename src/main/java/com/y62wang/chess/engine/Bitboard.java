@@ -84,18 +84,17 @@ public class Bitboard
     // history structure: [3 bits: captured piece] [16 bits: move] [4 bits: EP] [4 bits castle]
     private int irreversibleState;
 
-    public Bitboard(PieceList pieceList, Side turn, int irreversibleState)
-    {
-        this.pieceList = pieceList;
-        this.turn = turn;
-        this.irreversibleState = irreversibleState;
-        potentialMoves = new short[MAX_MOVES_PER_POSITION];
-        moveCount = 0;
-    }
-
     public Bitboard()
     {
         this(CharacterUtilities.toLittleEndianBoard(NEW_BOARD_CHARS));
+    }
+
+    private Bitboard(char[] board)
+    {
+        assignPiece(board);
+        turn = Side.WHITE;
+        irreversibleState = getIrreversibleState(FULL_CASTLE_RIGHT, NO_EP_TARGET, 0);
+        potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
     public Bitboard(Bitboard bb)
@@ -109,12 +108,19 @@ public class Bitboard
 
     public Bitboard(String FEN)
     {
+        parseFEN(FEN);
+    }
+
+    private void parseFEN(final String FEN)
+    {
         StringBuilder sb = new StringBuilder();
         String[] tokens = FEN.split(" ");
+
         if (tokens.length < 4)
         {
             throw new RuntimeException("Invalid FEN " + FEN);
         }
+
         for (int i = 0; i < tokens[0].length(); i++)
         {
             char c = tokens[0].charAt(i);
@@ -131,6 +137,7 @@ public class Bitboard
                 sb.append(c);
             }
         }
+
         assignPiece(CharacterUtilities.toLittleEndianBoard(sb.toString().toCharArray()));
         turn = (tokens[1].equalsIgnoreCase("w") ? Side.WHITE : Side.BLACK);
 
@@ -146,14 +153,6 @@ public class Bitboard
         halfMoveClock = tokens.length > 4 ? Short.parseShort(tokens[4]) : 0;
         fullMoveNumber = tokens.length > 5 ? Short.parseShort(tokens[5]) : 0;
 
-        potentialMoves = new short[MAX_MOVES_PER_POSITION];
-    }
-
-    public Bitboard(char[] board)
-    {
-        assignPiece(board);
-        turn = Side.WHITE;
-        irreversibleState = getIrreversibleState(FULL_CASTLE_RIGHT, NO_EP_TARGET, 0);
         potentialMoves = new short[MAX_MOVES_PER_POSITION];
     }
 
@@ -311,7 +310,6 @@ public class Bitboard
         pieceList.movePiece(toSq, fromSq);
 
         int moveCode = Move.moveCode(move);
-//        log.info("Unmake " + Move.moveString(Move.move(fromSq,toSq,moveCode)));
         if (moveCode == Move.QUIET_MOVE || moveCode == Move.DOUBLE_PAWN_PUSH)
         {
         }

@@ -1,0 +1,98 @@
+@startuml
+
+skinparam splines ortho
+skinparam linetype polyline
+
+component "Chess Engine" as engine {
+    note as engine_desc
+        Given a board position, the chess engine is responsible for computing the best move.
+        The chess engine can compute based on a set of constraints including time, play strength, etc.
+    end note
+
+    component "Search" as search {
+        note as search_desc
+            This module will contain different types
+            of search algorithms that can be equipped
+            by the engine.
+        end note
+    }
+    component "Move Generator" as movegen {
+        note as movegen_desc
+            Provides the board representation of the engine
+            and the ability to generate moves, as well as
+            transforming the board to a different state by
+            making a move.
+        end note
+    }
+    component "Board Evaluation" as evaluation {
+        note as evaluation_desc
+            Evaluates a position and provides a score
+            indicating which side has an advantage.
+        end note
+    }
+    component "Workflow Manager" as workflow {
+        note as workflow_desc
+            component that is dealing with how
+            search should be carried out.
+            This includes working with threads to
+            divide and conquer larger problems.
+            as well as monitoring the intermediate search results.
+        end note
+    }
+
+    component "Monitoring" as monitor {
+        note as monitor_desc
+        Provides insights into search and evaluation
+        as well as timing.
+        end note
+    }
+
+    engine_desc -[hidden]-> search
+    engine_desc -[hidden]-> workflow
+    engine_desc -[hidden]-> evaluation
+    workflow --> search
+    search --> movegen
+    search --> evaluation
+    monitor ..> search
+    monitor ..> evaluation
+}
+
+component Game as game {
+    note as game_desc
+        Game component keeps track of the state of a game.
+        This includes moves made by players, board state, history, etc.
+        Provides interface for interactions.
+    end note
+
+    component Player as player {
+        note as player_desc
+            different ways of
+            implementing players
+        end note
+    }
+
+    component "Game Flow" as gameflow {
+    }
+
+    component History as history {
+    }
+
+    game_desc -[hidden]-> player
+    game_desc -[hidden]-> history
+    game_desc -[hidden]-> gameflow
+    gameflow --> player
+    gameflow --> history
+}
+
+component UCI as uci {
+    note as uci_desc
+        implements the UCI protocol for the rule engine to
+        compete with other UCI enabled engines
+    end note
+}
+
+
+uci --> engine
+game --> engine
+
+@enduml

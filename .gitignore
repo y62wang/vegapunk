@@ -2,6 +2,7 @@
 .idea
 /gradle-user-home/
 /out/
+/bin/
 /build/
 
 
